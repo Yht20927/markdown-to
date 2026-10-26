@@ -1,7 +1,7 @@
 {
   "name": "pdf-to-md",
   "version": "1.0.0",
-  "description": "Extract text from PDF and convert to Markdown. 100% local processing.",
+  "description": "Convert PDF to Markdown with layout-aware headings, lists, tables, and code blocks. 100% local.",
   "main": "index.js",
   "dependencies": {
     "pdf-parse": "^1.1.1",

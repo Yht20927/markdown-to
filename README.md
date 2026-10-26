@@ -2,7 +2,7 @@
 
 > [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 128 个回归测试 · 美化增强
+> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 131 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -27,7 +27,7 @@
 |------|------|------|------|
 | **html-to-md** | HTML → MD | GFM 表格, 无 thead 表格处理 | <0.3s |
 | **word-to-md** | .docx → MD | GFM 表格 (P0-19 修复) | <1s |
-| **pdf-to-md** | PDF → MD | `--allow-empty` 扫描件保护 | <1s |
+| **pdf-to-md** | PDF → MD | 字体/坐标重建标题/列表/表格/代码块，过滤页码，`--allow-empty` | <1s |
 
 ### 表格工具
 
@@ -159,7 +159,7 @@ node pdf-to-md/index.js convert -i in.pdf -o out.md --allow-empty
 |------|------|------|
 | **marked → HTML** | md-to-pdf / html / word / image | marked + katex + hljs（word 另含 docx OOXML） |
 | **纯 regex 顺序替换** | md-to-latex / rst / confluence / text | 占位符保护 + 正则管线 |
-| **反向转换** | html-to-md / word-to-md / pdf-to-md | turndown / mammoth / pdf-parse |
+| **反向转换** | html-to-md / word-to-md / pdf-to-md | turndown / mammoth / pdf-parse + layout |
 | **表格专用** | csv-to-md / md-table-to-csv / json-to-md | shared/csv.js + shared/gfm-table.js |
 
 ### shared 模块 (`shared/`)
@@ -224,13 +224,13 @@ markdownFomart/
 ## 测试
 
 ```bash
-# 运行所有测试（128 个）
+# 运行所有测试（131 个）
 npm test
 
 # 仅共享模块测试（87 个）
 npm run test:shared
 
-# 仅工具集成测试（41 个）
+# 仅工具集成测试（44 个）
 npm run test:tools
 
 # 语法检查
@@ -243,7 +243,7 @@ npm run lint
 - 表格工具：空 cell 保留、`\|` 转义、RFC 4180 CSV 引号、BOM、引号内分隔符检测
 - 文本工具：图片/链接顺序修正、代码块占位符保护、粗斜体 `***` 嵌套
 - LaTeX/RST：特殊字符转义、标题下划线长度匹配、脚注配对、CJK 支持
-- 反向转换：GFM 表格 rule 补齐、无 thead 表格处理
+- 反向转换：GFM 表格 rule 补齐、无 thead 表格处理；PDF 基于字体/坐标重建标题、列表、表格和代码块
 
 ### 架构统一
 - 抽取 11 个 shared 模块消除重复代码
@@ -267,7 +267,7 @@ npm run lint
 | 批量处理 | 单个文件 | 支持脚本批量 |
 | 集成 | 手动操作 | 可嵌入 CI/脚本 |
 | 主题 | — | 29 个 PDF 主题 + 暗色模式 |
-| 数据正确性 | — | 21 项 P0 bug 修复 + 128 回归测试 |
+| 数据正确性 | — | 21 项 P0 bug 修复 + 131 回归测试 |
 | 收费 | 免费 | 开源 MIT |
 
 ## License

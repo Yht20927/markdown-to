@@ -39,7 +39,7 @@ triggers:
 |------|-------|-------------|-------|
 | **html-to-md** | HTML → MD | turndown | <0.3s |
 | **word-to-md** | .docx → MD | mammoth + turndown | <1s |
-| **pdf-to-md** | PDF → MD | pdf-parse | <1s |
+| **pdf-to-md** | PDF → MD | pdf-parse + layout heuristics | <1s |
 
 ### Table Tools
 

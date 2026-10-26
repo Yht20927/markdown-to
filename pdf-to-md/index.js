@@ -3,6 +3,7 @@ const { program } = require('commander');
 const fs = require('fs');
 const path = require('path');
 const { resolveInOut, handleError } = require('../shared/cli');
+const { extractPdf } = require('./layout');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
 
@@ -22,10 +23,9 @@ program.command('convert')
       if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
       if (!input.toLowerCase().endsWith('.pdf')) { console.error('Input must be a .pdf file'); process.exit(1); }
 
-      const pdfParse = require('pdf-parse');
       const buf = fs.readFileSync(input);
-      const data = await pdfParse(buf);
-      const text = data.text || '';
+      const result = await extractPdf(buf);
+      const text = result.markdown || '';
 
       // P0-21: Exit with code 1 for empty text, unless --allow-empty
       if (!text.trim()) {
@@ -37,7 +37,7 @@ program.command('convert')
         }
       }
       fs.writeFileSync(output, text.endsWith('\n') ? text : text + '\n', 'utf-8');
-      console.log(`Done: ${output} (${text.length} chars, ${data.numpages} pages)`);
+      console.log(`Done: ${output} (${text.length} chars, ${result.numpages} pages)`);
     } catch (e) { handleError(e); }
   });
 
