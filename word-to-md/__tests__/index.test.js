@@ -54,6 +54,14 @@ describe('word-to-md CLI', () => {
         '>',
         '> Second paragraph',
         '>',
+        '> ## Quote heading',
+        '>',
+        '> - quoted one',
+        '> - quoted two',
+        '>   - quoted nested',
+        '>',
+        '> 1. quoted ordered',
+        '>',
         '> ```js',
         '> const x = 1;',
         '> ```',
@@ -68,6 +76,9 @@ describe('word-to-md CLI', () => {
       assert.ok(md.includes('[x] done'), md);
       assert.ok(md.includes('[ ] todo'), md);
       assert.ok(md.includes('> Quote line\n> \n> Second paragraph'), md);
+      assert.ok(md.includes('> ## Quote heading'), md);
+      assert.match(md, /> \*\s+quoted one\n> \*\s+quoted two\n> {5}\*\s+quoted nested/);
+      assert.match(md, /> 1\.\s+quoted ordered/);
       assert.ok(md.includes('> ```\n> const x = 1;\n> ```'), md);
       assert.ok(md.includes('| :--- | :---: | ---: |'), md);
     } finally {

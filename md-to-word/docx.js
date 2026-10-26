@@ -63,6 +63,25 @@ const numbering = {
   ],
 };
 
+const quoteListStyles = ['Bullet', 'Number'].flatMap((kind) => Array.from({ length: 5 }, (_, index) => ({
+  id: `Quote${kind}${index + 1}`,
+  name: `Quote ${kind} ${index + 1}`,
+  basedOn: 'Normal',
+  paragraph: { indent: { left: 720 + index * 720 } },
+})));
+
+const quoteHeadingStyles = Array.from({ length: 6 }, (_, index) => ({
+  id: `QuoteHeading${index + 1}`,
+  name: `Quote Heading ${index + 1}`,
+  basedOn: `Heading${index + 1}`,
+  paragraph: {
+    indent: { left: 720 },
+    border: {
+      left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
+    },
+  },
+}));
+
 function headingLevel(depth) {
   return [
     HeadingLevel.HEADING_1,
@@ -248,9 +267,10 @@ function inlineRuns(tokens, baseDir, state = {}) {
 
 let numberingInstance = 0;
 
-function listParagraphs(token, baseDir, level, extra = {}) {
+function listParagraphs(token, baseDir, level, extra = {}, quoted = false) {
   const paragraphs = [];
-  const listExtra = extra.style === 'Quote' ? { ...extra, style: undefined } : extra;
+  const isQuote = quoted || extra.style === 'Quote';
+  const listExtra = isQuote ? { ...extra, style: undefined } : extra;
   const reference = token.ordered ? 'md-numbers' : 'md-bullets';
   const instance = ++numberingInstance;
   for (const item of token.items || []) {
@@ -263,12 +283,16 @@ function listParagraphs(token, baseDir, level, extra = {}) {
       else if (child.type !== 'space') inline.push(child);
     }
     if (item.task) inline.unshift({ type: 'text', text: item.checked ? '☑ ' : '☐ ' });
+    const style = isQuote
+      ? `Quote${token.ordered ? 'Number' : 'Bullet'}${Math.min(level, 4) + 1}`
+      : listExtra.style;
     paragraphs.push(new Paragraph({
       ...listExtra,
+      style,
       numbering: { reference, level: Math.min(level, 4), instance },
       children: inlineRuns(inline, baseDir),
     }));
-    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, listExtra));
+    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, listExtra, isQuote));
   }
   return paragraphs;
 }
@@ -324,12 +348,13 @@ function blockChildren(tokens, baseDir, quote = false) {
     switch (token.type) {
       case 'space':
         break;
-      case 'heading':
-        children.push(new Paragraph({
-          heading: headingLevel(token.depth),
-          children: inlineRuns(token.tokens, baseDir),
-        }));
+      case 'heading': {
+        const depth = Math.min(Math.max(token.depth || 1, 1), 6);
+        children.push(new Paragraph(quote
+          ? { style: `QuoteHeading${depth}`, children: inlineRuns(token.tokens, baseDir) }
+          : { heading: headingLevel(token.depth), children: inlineRuns(token.tokens, baseDir) }));
         break;
+      }
       case 'paragraph':
         children.push(new Paragraph({ ...quoteOptions, children: inlineRuns(token.tokens, baseDir) }));
         break;
@@ -443,7 +468,7 @@ async function markdownToDocx(md, { baseDir = process.cwd(), title = 'Markdown' 
             left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
           },
         },
-      }, {
+      }, ...quoteListStyles, ...quoteHeadingStyles, {
         id: 'MathBlock',
         name: 'Math Block',
         basedOn: 'Normal',

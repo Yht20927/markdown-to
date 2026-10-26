@@ -11,7 +11,7 @@ triggers:
 
 # md-to-word Skill
 
-Convert Markdown to native Word `.docx` (OOXML) or MSO-compatible HTML-as-`.doc`. The `.docx` path supports headings, tables, lists, images, links, code blocks, quote blocks, table alignment, and inline/display math.
+Convert Markdown to native Word `.docx` (OOXML) or MSO-compatible HTML-as-`.doc`. The `.docx` path supports headings, tables, lists, images, links, code blocks, quote blocks (including headings and nested lists), table alignment, and inline/display math.
 
 ## Usage
 
