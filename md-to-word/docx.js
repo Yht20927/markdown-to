@@ -211,6 +211,7 @@ let numberingInstance = 0;
 
 function listParagraphs(token, baseDir, level, extra = {}) {
   const paragraphs = [];
+  const listExtra = extra.style === 'Quote' ? { ...extra, style: undefined } : extra;
   const reference = token.ordered ? 'md-numbers' : 'md-bullets';
   const instance = ++numberingInstance;
   for (const item of token.items || []) {
@@ -224,11 +225,11 @@ function listParagraphs(token, baseDir, level, extra = {}) {
     }
     if (item.task) inline.unshift({ type: 'text', text: item.checked ? '☑ ' : '☐ ' });
     paragraphs.push(new Paragraph({
-      ...extra,
+      ...listExtra,
       numbering: { reference, level: Math.min(level, 4), instance },
       children: inlineRuns(inline, baseDir),
     }));
-    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, extra));
+    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, listExtra));
   }
   return paragraphs;
 }
@@ -240,9 +241,13 @@ function tableBlock(token, baseDir) {
       const alignment = cell.align === 'center'
         ? AlignmentType.CENTER
         : cell.align === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT;
+      const alignStyle = cell.align === 'center'
+        ? 'TableAlignCenter'
+        : cell.align === 'right' ? 'TableAlignRight' : cell.align === 'left' ? 'TableAlignLeft' : undefined;
       return new TableCell({
         shading: rowIndex === 0 ? { fill: 'F2F2F2' } : undefined,
         children: [new Paragraph({
+          style: alignStyle,
           alignment,
           children: inlineRuns(cell.tokens || [{ type: 'text', text: cell.text || '' }], baseDir, {
             bold: rowIndex === 0,
@@ -268,6 +273,7 @@ function tableBlock(token, baseDir) {
 function blockChildren(tokens, baseDir, quote = false) {
   const children = [];
   const quoteOptions = quote ? {
+    style: 'Quote',
     indent: { left: 720 },
     border: {
       left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
@@ -307,10 +313,13 @@ function blockChildren(tokens, baseDir, quote = false) {
           codeRuns.push(new TextRun({ text: line, font: 'Consolas', size: 18 }));
         });
         children.push(new Paragraph({
-          style: 'CodeBlock',
+          style: quote ? 'QuoteCode' : 'CodeBlock',
           shading: { fill: 'F2F2F2' },
           spacing: { before: 120, after: 120 },
-          indent: { left: 240, right: 240 },
+          indent: quote ? { left: 720 } : { left: 240, right: 240 },
+          border: quote ? {
+            left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
+          } : undefined,
           children: codeRuns,
         }));
         break;
@@ -363,6 +372,41 @@ async function markdownToDocx(md, { baseDir = process.cwd(), title = 'Markdown' 
           indent: { left: 240, right: 240 },
         },
         run: { font: 'Consolas', size: 18 },
+      }, {
+        id: 'Quote',
+        name: 'Quote',
+        basedOn: 'Normal',
+        paragraph: {
+          indent: { left: 720 },
+          border: {
+            left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
+          },
+        },
+      }, {
+        id: 'QuoteCode',
+        name: 'Quote Code',
+        basedOn: 'CodeBlock',
+        paragraph: {
+          indent: { left: 720 },
+          border: {
+            left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
+          },
+        },
+      }, {
+        id: 'TableAlignLeft',
+        name: 'Table Align Left',
+        basedOn: 'Normal',
+        paragraph: { alignment: AlignmentType.LEFT },
+      }, {
+        id: 'TableAlignCenter',
+        name: 'Table Align Center',
+        basedOn: 'Normal',
+        paragraph: { alignment: AlignmentType.CENTER },
+      }, {
+        id: 'TableAlignRight',
+        name: 'Table Align Right',
+        basedOn: 'Normal',
+        paragraph: { alignment: AlignmentType.RIGHT },
       }],
     },
     sections: [{

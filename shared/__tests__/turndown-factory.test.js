@@ -56,6 +56,11 @@ describe('turndown-factory HTML round-trip extensions', () => {
     assert.ok(md.includes('| :--- | :---: | ---: |'), md);
   });
 
+  it('reads alignment classes emitted by Word styles', () => {
+    const md = convert('<table><tr><th><p class="table-align-center">C</p></th><th><p class="table-align-right">R</p></th></tr><tr><td>1</td><td>2</td></tr></table>');
+    assert.ok(md.includes('| :---: | ---: |'), md);
+  });
+
   it('converts pre elements without nested code tags to fenced blocks', () => {
     const md = convert('<pre class="language-js">const x = 1;<br>console.log(x);</pre>');
     assert.ok(md.includes('```js\nconst x = 1;\nconsole.log(x);\n```'), md);

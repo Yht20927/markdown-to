@@ -20,7 +20,19 @@ const styleMap = [
   "p[style-name='Code Block'] => pre:fresh",
   "p[style-name='Source Code'] => pre:fresh",
   "p[style-name='HTML Preformatted'] => pre:fresh",
+  "p[style-name='Quote'] => blockquote > p:fresh",
+  "p[style-name='Quote Code'] => blockquote > pre:fresh",
+  "p[style-name='Intense Quote'] => blockquote > p:fresh",
+  "p[style-name='Table Align Left'] => p.table-align-left",
+  "p[style-name='Table Align Center'] => p.table-align-center",
+  "p[style-name='Table Align Right'] => p.table-align-right",
 ];
+
+function restoreTaskCheckboxes(html) {
+  return html
+    .replace(/(<li\b[^>]*>)(\s*(?:<p\b[^>]*>)?)\s*([☑☒✓✔])(?:&nbsp;|\s)*/g, '$1$2<input type="checkbox" checked disabled> ')
+    .replace(/(<li\b[^>]*>)(\s*(?:<p\b[^>]*>)?)\s*([☐✗✘])(?:&nbsp;|\s)*/g, '$1$2<input type="checkbox" disabled> ');
+}
 
 program
   .name('word-to-md')
@@ -61,7 +73,7 @@ program.command('convert')
           return { src };
         })
       });
-      const md = turndown.turndown(result.value);
+      const md = turndown.turndown(restoreTaskCheckboxes(result.value));
       fs.writeFileSync(output, md.endsWith('\n') ? md : md + '\n', 'utf-8');
       console.log(`Done: ${output} (${md.length} chars)`);
       if (result.messages.length > 0) console.log('Messages:', result.messages.map(m => m.message).join('; '));

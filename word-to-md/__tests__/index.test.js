@@ -24,4 +24,38 @@ describe('word-to-md CLI', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('restores tasks, quotes, and table alignment', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'word-to-md-'));
+    const input = path.join(dir, 'input.docx');
+    const output = path.join(dir, 'output.md');
+    try {
+      fs.writeFileSync(input, await markdownToDocx([
+        '- [x] done',
+        '- [ ] todo',
+        '',
+        '> Quote line',
+        '>',
+        '> Second paragraph',
+        '>',
+        '> ```js',
+        '> const x = 1;',
+        '> ```',
+        '',
+        '| L | C | R |',
+        '| :--- | :---: | ---: |',
+        '| 1 | 2 | 3 |',
+      ].join('\n'), { title: 'Features' }));
+      const result = spawnSync(process.execPath, [cli, 'convert', '-i', input, '-o', output], { encoding: 'utf-8' });
+      assert.strictEqual(result.status, 0, result.stderr);
+      const md = fs.readFileSync(output, 'utf-8');
+      assert.ok(md.includes('[x] done'), md);
+      assert.ok(md.includes('[ ] todo'), md);
+      assert.ok(md.includes('> Quote line\n> \n> Second paragraph'), md);
+      assert.ok(md.includes('> ```\n> const x = 1;\n> ```'), md);
+      assert.ok(md.includes('| :--- | :---: | ---: |'), md);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

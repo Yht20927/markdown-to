@@ -78,6 +78,11 @@ function createTurndown({ gfmTables = true, headingStyle = 'atx', codeBlockStyle
       const match = style.match(/text-align\s*:\s*(left|center|right)/i);
       align = match ? match[1].toLowerCase() : '';
     }
+    if (!align && cell.querySelector) {
+      const marker = cell.querySelector('.table-align-left, .table-align-center, .table-align-right');
+      const match = marker && (marker.getAttribute('class') || '').match(/table-align-(left|center|right)/);
+      align = match ? match[1] : '';
+    }
     if (align === 'center') return ':---:';
     if (align === 'right') return '---:';
     if (align === 'left') return ':---';
