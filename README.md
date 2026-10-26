@@ -41,6 +41,8 @@
 
 ## 安装
 
+要求 Node.js >= 22.12（Puppeteer 25）。
+
 ### npm workspace（推荐）
 
 ```bash
@@ -244,6 +246,10 @@ npm run lint
 - 文本工具：图片/链接顺序修正、代码块占位符保护、粗斜体 `***` 嵌套
 - LaTeX/RST：特殊字符转义、标题下划线长度匹配、脚注配对、CJK 支持
 - 反向转换：GFM 表格 rule 补齐、无 thead 表格处理；PDF 基于字体/坐标重建标题、列表、表格和代码块
+
+### 依赖安全
+- Puppeteer 25.16 / KaTeX 0.19.1 / Mammoth 1.13，并对 `@xmldom/xmldom`、`js-yaml` 做安全版本覆盖
+- `npm audit --omit=dev` 当前为 0 vulnerabilities
 
 ### 架构统一
 - 抽取 11 个 shared 模块消除重复代码

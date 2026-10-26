@@ -54,9 +54,9 @@ function chromeCandidates() {
  * use its normal default. Otherwise falls back to a system browser, then throws
  * an actionable error.
  *
- * @returns {string|undefined}
+ * @returns {Promise<string|undefined>}
  */
-function resolveChromeExecutable() {
+async function resolveChromeExecutable() {
   const envPath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
   if (envPath) {
     if (!fs.existsSync(envPath)) {
@@ -68,7 +68,7 @@ function resolveChromeExecutable() {
   }
 
   try {
-    const bundled = puppeteer.executablePath();
+    const bundled = await puppeteer.executablePath();
     if (bundled && fs.existsSync(bundled)) return undefined;
   } catch {
     // Puppeteer throws when its browser is not installed; try system browsers.
@@ -96,7 +96,7 @@ function resolveChromeExecutable() {
  * @returns {Promise<import('puppeteer').Browser>}
  */
 async function launchBrowser() {
-  const executablePath = resolveChromeExecutable();
+  const executablePath = await resolveChromeExecutable();
   return puppeteer.launch({
     headless: true,
     executablePath,

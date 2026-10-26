@@ -4,7 +4,7 @@
   "description": "Convert Word (.docx) to Markdown — mammoth + turndown, same pipeline as md-to.com.",
   "main": "index.js",
   "dependencies": {
-    "mammoth": "^1.8.0",
+    "mammoth": "^1.13.0",
     "turndown": "^7.2.0",
     "commander": "^13.0.0"
   }
