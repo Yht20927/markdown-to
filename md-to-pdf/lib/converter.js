@@ -8,7 +8,7 @@ async function htmlToPdf(
   html,
   outputPath,
   margin = { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' },
-  { allowRemote = false } = {}
+  { allowRemote = false, pageNumbers = true } = {}
 ) {
   await withPage(async (page) => {
     await page.setContent(html, {
@@ -16,12 +16,17 @@ async function htmlToPdf(
       timeout: 30000,
     });
 
+    const footerTemplate = pageNumbers
+      ? '<div style="width:100%;padding:0 15mm;font-size:9px;color:#8B949E;text-align:right;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
+      : '<span></span>';
     await page.pdf({
       path: outputPath,
       format: 'A4',
       margin,
       printBackground: true,
-      displayHeaderFooter: false,
+      displayHeaderFooter: pageNumbers,
+      headerTemplate: '<span></span>',
+      footerTemplate,
       preferCSSPageSize: false,
     });
   }, { allowRemote });
@@ -32,7 +37,7 @@ async function htmlToPreview(html, outputPath) {
   fs.writeFileSync(outputPath, html, 'utf-8');
 }
 
-async function convertFile(inputPath, outputPath, templateId, { allowRemote = false } = {}) {
+async function convertFile(inputPath, outputPath, templateId, { allowRemote = false, pageNumbers = true } = {}) {
   const fs = require('fs');
   const { renderHtml } = require('./renderer');
 
@@ -52,7 +57,7 @@ async function convertFile(inputPath, outputPath, templateId, { allowRemote = fa
     const pdfHtml = inlineLocalImages(html, path.dirname(inputPath));
     // F-5: Use pageMargin from theme if available, otherwise default
     const margin = template.pageMargin || { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' };
-    await htmlToPdf(pdfHtml, outputPath, margin, { allowRemote });
+    await htmlToPdf(pdfHtml, outputPath, margin, { allowRemote, pageNumbers });
   }
 
   return { template };

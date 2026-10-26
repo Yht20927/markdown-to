@@ -10,7 +10,7 @@
 
 | 工具 | 输出 | 特性 | 速度 |
 |------|------|------|------|
-| **md-to-pdf** | PDF (29 主题) | KaTeX 数学 + hljs 高亮 + 封面/页码/TOC | ~3s |
+| **md-to-pdf** | PDF (29 主题) | KaTeX 数学 + hljs 高亮 + 页码（可关闭） | ~3s |
 | **md-to-word** | Word .doc | mso 命名空间样式, 表格/标题原生识别 | <0.5s |
 | **md-to-html** | HTML5 | GitHub 风格 CSS, `--theme dark` 暗色模式 | <0.5s |
 | **md-to-image** | PNG / JPG | `--scale` 高 DPI, `--watermark` 水印, `--padding` | ~2s |
@@ -91,6 +91,9 @@ node md-to-pdf/index.js info github-dark-sans-modern
 
 # 转换（默认主题: github-dark-sans-modern-standard）
 node md-to-pdf/index.js convert -i in.md -o out.pdf -t <theme-id>
+
+# 关闭页码
+node md-to-pdf/index.js convert -i in.md -o out.pdf --no-page-numbers
 
 # 预览 HTML（不生成 PDF）
 node md-to-pdf/index.js convert -i in.md -o out.html

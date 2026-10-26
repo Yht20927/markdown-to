@@ -8,6 +8,7 @@ const { buildHtmlPage } = require('../shared/html-page');
 const { stripFrontmatter } = require('../shared/frontmatter');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const { renderMarkdown } = createRenderer({ Marked, katex, hljs });
 
@@ -100,8 +101,13 @@ program.command('convert')
     const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
     const bodyHtml = renderMarkdown(md);
 
+    // Relative images/links resolve against the source Markdown directory.
+    const baseHref = pathToFileURL(path.dirname(input) + path.sep).href;
+    const baseTag = `  <base href="${baseHref.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">`;
+
     // Word namespace XML + mso CSS
-    const headExtra = `<!--[if gte mso 9]><xml>
+    const headExtra = `${baseTag}
+<!--[if gte mso 9]><xml>
 <w:WordDocument>
 <w:View>Print</w:View>
 <w:Zoom>100</w:Zoom>

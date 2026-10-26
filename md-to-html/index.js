@@ -8,6 +8,7 @@ const { buildHtmlPage } = require('../shared/html-page');
 const { stripFrontmatter } = require('../shared/frontmatter');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const { renderMarkdown } = createRenderer({ Marked, katex, hljs });
 
@@ -95,14 +96,19 @@ const baseCss = `
   }
 `;
 
-function markdownToHtml(md, { theme = 'light' } = {}) {
+function markdownToHtml(md, { theme = 'light', baseHref = '' } = {}) {
   const body = renderMarkdown(md);
   const themeCss = theme === 'dark' ? darkCss : theme === 'auto' ? autoCss : lightCss;
+  const baseTag = baseHref
+    ? `  <base href="${baseHref.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">
+`
+    : '';
   return buildHtmlPage({
     body,
     css: themeCss + baseCss,
     title: 'Markdown to HTML',
     lang: 'zh-CN',
+    headExtra: baseTag,
   });
 }
 
@@ -121,7 +127,8 @@ program.command('convert')
     const output = path.resolve(opts.output);
     if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
     const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
-    const html = markdownToHtml(md, { theme: opts.theme });
+    const baseHref = pathToFileURL(path.dirname(input) + path.sep).href;
+    const html = markdownToHtml(md, { theme: opts.theme, baseHref });
     fs.writeFileSync(output, html, 'utf-8');
     console.log(`Done: ${output} (${Buffer.byteLength(html)} bytes)`);
   });

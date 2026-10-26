@@ -65,6 +65,7 @@ node <tool-dir>/index.js convert -i <input> -o <output>
 node md-to-pdf/index.js list              # List 29 PDF themes
 node md-to-pdf/index.js info <theme-id>   # Theme color/font details
 node md-to-pdf/index.js convert -i in.md -o out.pdf -t <theme>
+node md-to-pdf/index.js convert -i in.md -o out.pdf --no-page-numbers
 
 # csv-to-md extras:
 node csv-to-md/index.js convert -i in.csv -o out.md -d ','   # Specify delimiter
