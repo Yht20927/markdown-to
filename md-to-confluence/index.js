@@ -183,6 +183,14 @@ function mdToConfluence(md) {
     result = result.split(make('CODEBLOCK', i)).join(`\n\n{code${langAttr}}\n${cb.code}\n{code}\n\n`);
   }
 
+  let inCodeBlock = false;
+  result = result.split('\n').map((line) => {
+    if (/^\s*\{code(?:[:\s]|\})/.test(line)) { inCodeBlock = true; return line; }
+    if (/^\s*\{code\}\s*$/.test(line)) { inCodeBlock = false; return line; }
+    if (inCodeBlock || !/^\s*\|/.test(line)) return line;
+    return line.replace(/\{\{([\s\S]*?)\}\}/g, (_m, code) => `{{${code.replace(/(?<!\\)\|/g, '\\|')}}}`);
+  }).join('\n');
+
   assertAllRestored(result);
   return result.replace(/\n{3,}/g, '\n\n').trim();
 }

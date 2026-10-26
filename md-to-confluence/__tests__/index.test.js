@@ -53,6 +53,12 @@ describe('md-to-confluence P0 fixes', () => {
     assert.ok(out.includes('|[x|https://e.test/a]|{{c}}|'), out);
   });
 
+  it('should escape pipes inside inline code in table cells', () => {
+    const out = runConvert('| A | B |\n|---|---|\n| `a|b` | `c` |\n\n`x|y`');
+    assert.ok(out.includes('|{{a\\|b}}|{{c}}|'), out);
+    assert.ok(out.includes('{{x|y}}'), out);
+  });
+
   it('should convert reference links and footnote references', () => {
     const out = runConvert('[ref][id] and note [^1]\n\n[id]: https://example.com\n[^1]: foot');
     assert.ok(out.includes('[ref|https://example.com]'), out);
