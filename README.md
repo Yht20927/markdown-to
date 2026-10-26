@@ -2,7 +2,7 @@
 
 > [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 124 个回归测试 · 美化增强
+> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 125 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -11,7 +11,9 @@
 | 工具 | 输出 | 特性 | 速度 |
 |------|------|------|------|
 | **md-to-pdf** | PDF (29 主题) | KaTeX 数学 + hljs 高亮 + 页码（可关闭） | ~3s |
-| **md-to-word** | Word .doc | mso 命名空间样式, 表格/标题原生识别 | <0.5s |
+| **md-to-word** | Word .doc | mso 样式, 表格/标题原生识别, 公式保留 TeX 源码 | <0.5s |
+
+> `md-to-word` 输出 HTML-as-`.doc`，不是 OOXML `.docx`；如需 `.docx`，可用 LibreOffice 转换。
 | **md-to-html** | HTML5 | GitHub 风格 CSS, `--theme dark` 暗色模式 | <0.5s |
 | **md-to-image** | PNG / JPG | `--scale` 高 DPI, `--watermark` 水印, `--padding` | ~2s |
 | **md-to-text** | 纯文本 | 代码块保护, 图片/链接顺序修正 | <0.1s |
@@ -174,7 +176,7 @@ markdownFomart/
 ├── REFACTOR_PLAN.md          ← 重构方案（v2.0 蓝图）
 ├── package.json              ← npm workspace 根配置
 ├── shared/                   ← 共享模块（11 个）
-│   ├── __tests__/            ← 共享模块测试（86 个）
+│   ├── __tests__/            ← 共享模块测试（87 个）
 │   ├── html-renderer.js
 │   ├── placeholders.js
 │   ├── gfm-table.js
@@ -212,10 +214,10 @@ markdownFomart/
 ## 测试
 
 ```bash
-# 运行所有测试（124 个）
+# 运行所有测试（125 个）
 npm test
 
-# 仅共享模块测试（86 个）
+# 仅共享模块测试（87 个）
 npm run test:shared
 
 # 仅工具集成测试（38 个）

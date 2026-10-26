@@ -33,7 +33,7 @@ function inlineLocalImages(html, baseDir) {
   });
 }
 
-function createRenderer({ Marked, katex, hljs }) {
+function createRenderer({ Marked, katex, hljs, mathMode = 'katex' }) {
   function escapeHtml(str) {
     return str
       .replace(/&/g, '&amp;')
@@ -44,6 +44,12 @@ function createRenderer({ Marked, katex, hljs }) {
   }
 
   function renderKatex(tex, displayMode) {
+    if (mathMode === 'tex') {
+      const source = escapeHtml(tex.trim());
+      return displayMode
+        ? `<div class="math math-display">${source}</div>`
+        : `<span class="math math-inline">${source}</span>`;
+    }
     try {
       return katex.renderToString(tex.trim(), { displayMode, throwOnError: false });
     } catch {

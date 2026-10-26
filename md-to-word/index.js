@@ -6,11 +6,12 @@ const hljs = require('highlight.js');
 const { createRenderer } = require('../shared/html-renderer');
 const { buildHtmlPage } = require('../shared/html-page');
 const { stripFrontmatter } = require('../shared/frontmatter');
+const { hljsCss } = require('../shared/math-assets');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
-const { renderMarkdown } = createRenderer({ Marked, katex, hljs });
+const { renderMarkdown } = createRenderer({ Marked, katex, hljs, mathMode: 'tex' });
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
 
@@ -83,6 +84,8 @@ const msoCss = `
 
   img { max-width: 100%; }
   a { color: #0563C1; }
+  .math { font-family: 'Cambria Math', 'Times New Roman', serif; font-style: italic; }
+  .math-display { text-align: center; margin: 6pt 0; }
 `;
 
 program
@@ -98,8 +101,13 @@ program.command('convert')
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
     if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
+    if (!/\.doc$/i.test(output)) {
+      console.error('Output must be a .doc file (md-to-word emits HTML-based .doc, not .docx)');
+      process.exit(1);
+    }
     const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
     const bodyHtml = renderMarkdown(md);
+    const codeCss = `<style>${hljsCss(false)}</style>`;
 
     // Relative images/links resolve against the source Markdown directory.
     const baseHref = pathToFileURL(path.dirname(input) + path.sep).href;
@@ -107,6 +115,7 @@ program.command('convert')
 
     // Word namespace XML + mso CSS
     const headExtra = `${baseTag}
+${codeCss}
 <!--[if gte mso 9]><xml>
 <w:WordDocument>
 <w:View>Print</w:View>

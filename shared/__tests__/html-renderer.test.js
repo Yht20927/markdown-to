@@ -9,12 +9,20 @@ const path = require('path');
 const os = require('os');
 
 const { renderMarkdown } = createRenderer({ Marked, katex, hljs });
+const { renderMarkdown: renderTexMath } = createRenderer({ Marked, katex, hljs, mathMode: 'tex' });
 
 test('html-renderer: renders inline and display math', () => {
   const html = renderMarkdown('inline $x_i$ math\n\n$$\n\\sum_{i=1}^n i\n$$\n');
   assert.match(html, /class="katex"/);
   assert.match(html, /class="katex-display"/);
   assert.doesNotMatch(html, /IM:0|BM:0/);
+});
+
+test('html-renderer: tex math mode preserves readable source', () => {
+  const html = renderTexMath('inline $x_i$ math\n\n$$\n\\sum_{i=1}^n i\n$$\n');
+  assert.match(html, /class="math math-inline">x_i</);
+  assert.match(html, /class="math math-display">/);
+  assert.doesNotMatch(html, /class="katex"/);
 });
 
 test('html-renderer: does not treat currency as math', () => {
