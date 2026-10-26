@@ -46,7 +46,7 @@ describe('md-to-word docx', () => {
   });
 
   it('emits quote and table alignment styles', async () => {
-    const buffer = await markdownToDocx('> Quote\n>\n> ## Quote heading\n>\n> ```js\n> const x = 1;\n> ```\n>\n> - quoted one\n> - quoted two\n>   - quoted nested\n>     1. nested ordered quote\n>\n> 1. ordered quote\n\n| L | C | R |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |', { title: 'Styles' });
+    const buffer = await markdownToDocx('> Quote\n>\n> ## Quote heading\n>\n> ```js\n> const x = 1;\n> ```\n>\n> - quoted one\n> - quoted two\n>   - quoted nested\n>     1. nested ordered quote\n>\n> 1. ordered quote\n>\n> $$\n> a+b\n> $$\n>\n> > Nested quote\n> >\n> > - nested quote bullet\n\n| L | C | R |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |', { title: 'Styles' });
     const zip = await JSZip.loadAsync(buffer);
     const document = await zip.file('word/document.xml').async('string');
     const styles = await zip.file('word/styles.xml').async('string');
@@ -57,6 +57,9 @@ describe('md-to-word docx', () => {
     assert.match(document, /w:pStyle w:val="QuoteUlUl"/);
     assert.match(document, /w:pStyle w:val="QuoteUlUlOl"/);
     assert.match(document, /w:pStyle w:val="QuoteOl"/);
+    assert.match(document, /w:pStyle w:val="QuoteMathBlock"/);
+    assert.match(document, /w:pStyle w:val="Quote2"/);
+    assert.match(document, /w:pStyle w:val="Quote2Ul"/);
     assert.match(document, /w:pStyle w:val="TableAlignCenter"/);
     assert.match(styles, /w:styleId="Quote"/);
     assert.match(styles, /w:styleId="QuoteCode"/);
@@ -65,6 +68,9 @@ describe('md-to-word docx', () => {
     assert.match(styles, /w:styleId="QuoteUlUl"/);
     assert.match(styles, /w:styleId="QuoteUlUlOl"/);
     assert.match(styles, /w:styleId="QuoteOl"/);
+    assert.match(styles, /w:styleId="QuoteMathBlock"/);
+    assert.match(styles, /w:styleId="Quote2"/);
+    assert.match(styles, /w:styleId="Quote2Ul"/);
     assert.match(styles, /w:styleId="TableAlignCenter"/);
   });
 

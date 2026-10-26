@@ -11,7 +11,7 @@ triggers:
 
 # word-to-md Skill
 
-Convert Word (.docx) to Markdown — mammoth + turndown, same pipeline as md-to.com. Code styles (`Code Char`, `Verbatim Char`, `Code Block`, `HTML Preformatted`), quote paragraphs/headings/lists, task checkboxes, table column alignment, and inline/display math are restored where possible.
+Convert Word (.docx) to Markdown — mammoth + turndown, same pipeline as md-to.com. Code styles (`Code Char`, `Verbatim Char`, `Code Block`, `HTML Preformatted`), quote paragraphs/headings/lists (nested quotes up to 3 levels), task checkboxes, table column alignment, and inline/display math are restored where possible.
 
 ## Usage
 

@@ -9,16 +9,18 @@ for (let depth = 1; depth <= MAX_DEPTH; depth++) {
   }
 }
 
-function quoteListStyleName(chain) {
-  return `Quote ${chain.map((tag) => (tag === 'ol' ? 'Ordered' : 'Bullet')).join(' ')}`;
+function quoteListStyleName(chain, quoteDepth = 1) {
+  const prefix = quoteDepth > 1 ? `Quote ${quoteDepth}` : 'Quote';
+  return `${prefix} ${chain.map((tag) => (tag === 'ol' ? 'Ordered' : 'Bullet')).join(' ')}`;
 }
 
-function quoteListStyleId(chain) {
-  return `Quote${chain.map((tag) => (tag === 'ol' ? 'Ol' : 'Ul')).join('')}`;
+function quoteListStyleId(chain, quoteDepth = 1) {
+  const id = chain.map((tag) => (tag === 'ol' ? 'Ol' : 'Ul')).join('');
+  return quoteDepth > 1 ? `Quote${quoteDepth}${id}` : `Quote${id}`;
 }
 
-function quoteListPath(chain) {
-  return chain.map((tag) => `${tag} > li`).join(' > ');
+function quoteListPath(chain, quoteDepth = 1) {
+  return `${'blockquote > '.repeat(quoteDepth)}${chain.map((tag) => `${tag} > li`).join(' > ')}`;
 }
 
 module.exports = { quoteListChains, quoteListStyleName, quoteListStyleId, quoteListPath };

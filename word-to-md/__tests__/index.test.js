@@ -64,9 +64,17 @@ describe('word-to-md CLI', () => {
         '> 1. quoted ordered',
         '>    1. quoted ordered nested',
         '>',
+        '> $$',
+        '> a+b',
+        '> $$',
+        '>',
         '> ```js',
         '> const x = 1;',
         '> ```',
+        '>',
+        '> > Nested quote',
+        '> >',
+        '> > - nested quote bullet',
         '',
         '| L | C | R |',
         '| :--- | :---: | ---: |',
@@ -81,7 +89,10 @@ describe('word-to-md CLI', () => {
       assert.ok(md.includes('> ## Quote heading'), md);
       assert.match(md, /> \*\s+quoted one\n> \*\s+quoted two\n> +\*\s+quoted nested\n> +1\.\s+quoted nested ordered/);
       assert.match(md, /> 1\.\s+quoted ordered\n> +1\.\s+quoted ordered nested/);
+      assert.ok(md.includes('> $$\n> a+b\n> $$'), md);
       assert.ok(md.includes('> ```\n> const x = 1;\n> ```'), md);
+      assert.ok(md.includes('> > Nested quote'), md);
+      assert.match(md, /> > \*\s+nested quote bullet/);
       assert.ok(md.includes('| :--- | :---: | ---: |'), md);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });

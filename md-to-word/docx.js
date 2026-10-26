@@ -64,23 +64,80 @@ const numbering = {
   ],
 };
 
-const quoteListStyles = quoteListChains.map((chain) => ({
-  id: quoteListStyleId(chain),
-  name: quoteListStyleName(chain),
-  basedOn: 'Normal',
-  paragraph: { indent: { left: 720 * chain.length } },
-}));
+const MAX_QUOTE_DEPTH = 3;
+const QUOTE_DEPTHS = Array.from({ length: MAX_QUOTE_DEPTH }, (_, index) => index + 1);
 
-const quoteHeadingStyles = Array.from({ length: 6 }, (_, index) => ({
-  id: `QuoteHeading${index + 1}`,
-  name: `Quote Heading ${index + 1}`,
-  basedOn: `Heading${index + 1}`,
-  paragraph: {
-    indent: { left: 720 },
+function quoteParagraphStyleId(quoteDepth) {
+  return quoteDepth > 1 ? `Quote${quoteDepth}` : 'Quote';
+}
+
+function quoteElementStyleId(base, quoteDepth) {
+  return quoteDepth > 1 ? `Quote${quoteDepth}${base}` : `Quote${base}`;
+}
+
+function quoteElementStyleName(label, quoteDepth) {
+  return quoteDepth > 1 ? `Quote ${quoteDepth} ${label}` : `Quote ${label}`;
+}
+
+function quoteHeadingStyleId(quoteDepth, level) {
+  return quoteDepth > 1 ? `Quote${quoteDepth}Heading${level}` : `QuoteHeading${level}`;
+}
+
+function quoteHeadingStyleName(quoteDepth, level) {
+  return quoteDepth > 1 ? `Quote ${quoteDepth} Heading ${level}` : `Quote Heading ${level}`;
+}
+
+function quoteOptions(quoteDepth) {
+  if (!quoteDepth) return {};
+  return {
+    style: quoteParagraphStyleId(quoteDepth),
+    indent: { left: 720 * quoteDepth },
     border: {
       left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
     },
-  },
+  };
+}
+
+const quoteListStyles = [];
+const quoteHeadingStyles = [];
+for (const quoteDepth of QUOTE_DEPTHS) {
+  for (const chain of quoteListChains) {
+    quoteListStyles.push({
+      id: quoteListStyleId(chain, quoteDepth),
+      name: quoteListStyleName(chain, quoteDepth),
+      basedOn: 'Normal',
+      paragraph: { indent: { left: 720 * (quoteDepth - 1 + chain.length) } },
+    });
+  }
+  for (let level = 1; level <= 6; level++) {
+    quoteHeadingStyles.push({
+      id: quoteHeadingStyleId(quoteDepth, level),
+      name: quoteHeadingStyleName(quoteDepth, level),
+      basedOn: quoteDepth > 1 ? `QuoteHeading${level}` : `Heading${level}`,
+      paragraph: { indent: { left: 720 * quoteDepth } },
+    });
+  }
+}
+
+const quoteDepthParagraphStyles = QUOTE_DEPTHS.slice(1).map((quoteDepth) => ({
+  id: quoteParagraphStyleId(quoteDepth),
+  name: `Quote ${quoteDepth}`,
+  basedOn: 'Quote',
+  paragraph: { indent: { left: 720 * quoteDepth } },
+}));
+
+const quoteCodeStyles = QUOTE_DEPTHS.slice(1).map((quoteDepth) => ({
+  id: quoteElementStyleId('Code', quoteDepth),
+  name: quoteElementStyleName('Code', quoteDepth),
+  basedOn: 'QuoteCode',
+  paragraph: { indent: { left: 720 * quoteDepth } },
+}));
+
+const quoteMathStyles = QUOTE_DEPTHS.slice(1).map((quoteDepth) => ({
+  id: quoteElementStyleId('MathBlock', quoteDepth),
+  name: quoteElementStyleName('Math Block', quoteDepth),
+  basedOn: 'QuoteMathBlock',
+  paragraph: { indent: { left: 720 * quoteDepth } },
 }));
 
 function headingLevel(depth) {
@@ -268,9 +325,9 @@ function inlineRuns(tokens, baseDir, state = {}) {
 
 let numberingInstance = 0;
 
-function listParagraphs(token, baseDir, level, extra = {}, quoted = false, chain = []) {
+function listParagraphs(token, baseDir, level, extra = {}, quoteDepth = 0, chain = []) {
   const paragraphs = [];
-  const isQuote = quoted || extra.style === 'Quote';
+  const isQuote = quoteDepth > 0;
   const listExtra = isQuote ? { ...extra, style: undefined } : extra;
   const currentChain = [...chain, token.ordered ? 'ol' : 'ul'];
   const reference = token.ordered ? 'md-numbers' : 'md-bullets';
@@ -285,14 +342,14 @@ function listParagraphs(token, baseDir, level, extra = {}, quoted = false, chain
       else if (child.type !== 'space') inline.push(child);
     }
     if (item.task) inline.unshift({ type: 'text', text: item.checked ? '☑ ' : '☐ ' });
-    const style = isQuote ? quoteListStyleId(currentChain) : listExtra.style;
+    const style = isQuote ? quoteListStyleId(currentChain, quoteDepth) : listExtra.style;
     paragraphs.push(new Paragraph({
       ...listExtra,
       style,
       numbering: { reference, level: Math.min(level, 4), instance },
       children: inlineRuns(inline, baseDir),
     }));
-    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, listExtra, isQuote, currentChain));
+    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, listExtra, quoteDepth, currentChain));
   }
   return paragraphs;
 }
@@ -333,15 +390,9 @@ function tableBlock(token, baseDir) {
   });
 }
 
-function blockChildren(tokens, baseDir, quote = false) {
+function blockChildren(tokens, baseDir, quoteDepth = 0) {
   const children = [];
-  const quoteOptions = quote ? {
-    style: 'Quote',
-    indent: { left: 720 },
-    border: {
-      left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
-    },
-  } : {};
+  const quoteOpts = quoteOptions(quoteDepth);
 
   for (const token of tokens || []) {
     if (!token) continue;
@@ -350,30 +401,30 @@ function blockChildren(tokens, baseDir, quote = false) {
         break;
       case 'heading': {
         const depth = Math.min(Math.max(token.depth || 1, 1), 6);
-        children.push(new Paragraph(quote
-          ? { style: `QuoteHeading${depth}`, children: inlineRuns(token.tokens, baseDir) }
+        children.push(new Paragraph(quoteDepth
+          ? { style: quoteHeadingStyleId(quoteDepth, depth), children: inlineRuns(token.tokens, baseDir) }
           : { heading: headingLevel(token.depth), children: inlineRuns(token.tokens, baseDir) }));
         break;
       }
       case 'paragraph':
-        children.push(new Paragraph({ ...quoteOptions, children: inlineRuns(token.tokens, baseDir) }));
+        children.push(new Paragraph({ ...quoteOpts, children: inlineRuns(token.tokens, baseDir) }));
         break;
       case 'text':
-        children.push(new Paragraph({ ...quoteOptions, children: inlineRuns(token.tokens || [{ type: 'text', text: token.text }], baseDir) }));
+        children.push(new Paragraph({ ...quoteOpts, children: inlineRuns(token.tokens || [{ type: 'text', text: token.text }], baseDir) }));
         break;
       case 'list':
-        children.push(...listParagraphs(token, baseDir, 0, quoteOptions));
+        children.push(...listParagraphs(token, baseDir, 0, quoteOpts, quoteDepth));
         break;
       case 'blockquote':
-        children.push(...blockChildren(token.tokens, baseDir, true));
+        children.push(...blockChildren(token.tokens, baseDir, Math.min(quoteDepth + 1, MAX_QUOTE_DEPTH)));
         break;
       case 'table':
         children.push(tableBlock(token, baseDir));
         break;
       case 'mathBlock':
         children.push(new Paragraph({
-          ...quoteOptions,
-          style: 'MathBlock',
+          ...quoteOpts,
+          style: quoteDepth ? quoteElementStyleId('MathBlock', quoteDepth) : 'MathBlock',
           children: mathRuns(token.text, null),
         }));
         break;
@@ -384,11 +435,11 @@ function blockChildren(tokens, baseDir, quote = false) {
           codeRuns.push(new TextRun({ text: line, font: 'Consolas', size: 18 }));
         });
         children.push(new Paragraph({
-          style: quote ? 'QuoteCode' : 'CodeBlock',
+          style: quoteDepth ? quoteElementStyleId('Code', quoteDepth) : 'CodeBlock',
           shading: { fill: 'F2F2F2' },
           spacing: { before: 120, after: 120 },
-          indent: quote ? { left: 720 } : { left: 240, right: 240 },
-          border: quote ? {
+          indent: quoteDepth ? { left: 720 * quoteDepth } : { left: 240, right: 240 },
+          border: quoteDepth ? {
             left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
           } : undefined,
           children: codeRuns,
@@ -403,11 +454,11 @@ function blockChildren(tokens, baseDir, quote = false) {
         break;
       case 'html': {
         const text = String(token.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
-        if (text) children.push(new Paragraph({ ...quoteOptions, children: inlineRuns([{ type: 'text', text }], baseDir) }));
+        if (text) children.push(new Paragraph({ ...quoteOpts, children: inlineRuns([{ type: 'text', text }], baseDir) }));
         break;
       }
       default:
-        if (token.tokens) children.push(...blockChildren(token.tokens, baseDir, quote));
+        if (token.tokens) children.push(...blockChildren(token.tokens, baseDir, quoteDepth));
     }
   }
   return children;
@@ -478,6 +529,16 @@ async function markdownToDocx(md, { baseDir = process.cwd(), title = 'Markdown' 
         },
         run: { font: 'Cambria Math', size: 22 },
       }, {
+        id: 'QuoteMathBlock',
+        name: 'Quote Math Block',
+        basedOn: 'MathBlock',
+        paragraph: {
+          indent: { left: 720 },
+          border: {
+            left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
+          },
+        },
+      }, ...quoteDepthParagraphStyles, ...quoteCodeStyles, ...quoteMathStyles, {
         id: 'TableAlignLeft',
         name: 'Table Align Left',
         basedOn: 'Normal',

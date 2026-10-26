@@ -3,6 +3,9 @@ const { program } = require('commander');
 const mammoth = require('mammoth');
 const { createTurndown } = require('../shared/turndown-factory');
 const { quoteListChains, quoteListStyleName, quoteListPath } = require('../shared/word-quote-lists');
+
+const MAX_QUOTE_DEPTH = 3;
+const QUOTE_DEPTHS = Array.from({ length: MAX_QUOTE_DEPTH }, (_, index) => index + 1);
 const fs = require('fs');
 const path = require('path');
 
@@ -22,10 +25,17 @@ const styleMap = [
   "p[style-name='Source Code'] => pre:fresh",
   "p[style-name='HTML Preformatted'] => pre:fresh",
   "r[style-name='Inline Math'] => span.math-inline",
-  "p[style-name='Quote'] => blockquote > p:fresh",
-  ...quoteListChains.map((chain) => `p[style-name='${quoteListStyleName(chain)}'] => blockquote > ${quoteListPath(chain)}:fresh`),
-  "p[style-name='Quote Code'] => blockquote > pre:fresh",
-  ...Array.from({ length: 6 }, (_, index) => `p[style-name='Quote Heading ${index + 1}'] => blockquote > h${index + 1}:fresh`),
+  ...QUOTE_DEPTHS.flatMap((quoteDepth) => {
+    const prefix = 'blockquote > '.repeat(quoteDepth);
+    const label = quoteDepth > 1 ? `Quote ${quoteDepth}` : 'Quote';
+    return [
+      `p[style-name='${label}'] => ${prefix}p:fresh`,
+      ...quoteListChains.map((chain) => `p[style-name='${quoteListStyleName(chain, quoteDepth)}'] => ${quoteListPath(chain, quoteDepth)}:fresh`),
+      `p[style-name='${label} Code'] => ${prefix}pre:fresh`,
+      ...Array.from({ length: 6 }, (_, index) => `p[style-name='${label} Heading ${index + 1}'] => ${prefix}h${index + 1}:fresh`),
+      `p[style-name='${label} Math Block'] => ${prefix}div.math-display:fresh`,
+    ];
+  }),
   "p[style-name='Math Block'] => div.math-display:fresh",
   "p[style-name='Intense Quote'] => blockquote > p:fresh",
   "p[style-name='Table Align Left'] => p.table-align-left",
