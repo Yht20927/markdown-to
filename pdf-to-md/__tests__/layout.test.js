@@ -27,6 +27,7 @@ describe('pdf-to-md layout', () => {
       item('Section', 42, 680, 10.5, 'bold'),
       item('alpha', 60, 650),
       item('beta', 60, 630),
+      item('nested item', 78, 610),
       item('A', 52, 600, 9, 'bold'),
       item('B', 307, 600, 9, 'bold'),
       item('1', 52, 570),
@@ -40,7 +41,7 @@ describe('pdf-to-md layout', () => {
     assert.match(markdown, /^# Report Title/m);
     assert.ok(markdown.includes('First paragraph continues here'), markdown);
     assert.match(markdown, /^## Section/m);
-    assert.ok(markdown.includes('- alpha\n- beta'), markdown);
+    assert.ok(markdown.includes('- alpha\n- beta\n  - nested item'), markdown);
     assert.ok(markdown.includes('| A | B |'), markdown);
     assert.ok(markdown.includes('| 1 | 2 |'), markdown);
     assert.ok(markdown.includes('```js\nconst x = 1;\n```'), markdown);

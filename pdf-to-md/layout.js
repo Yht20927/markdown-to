@@ -201,6 +201,7 @@ function pageToBlocks(lines, bodySize) {
   let paragraph = [];
   let list = [];
   let listKind = '';
+  let listBase = null;
   let quote = [];
   let previousParagraphLine = null;
 
@@ -213,6 +214,7 @@ function pageToBlocks(lines, bodySize) {
     if (list.length) blocks.push(list.join('\n'));
     list = [];
     listKind = '';
+    listBase = null;
   };
   const flushQuote = () => {
     if (quote.length) blocks.push(quote.map((line) => `> ${line.text}`).join('\n'));
@@ -275,9 +277,12 @@ function pageToBlocks(lines, bodySize) {
       const kind = ordered ? 'ordered' : 'bullet';
       if (listKind && listKind !== kind) flushList();
       listKind = kind;
-      if (bullet) list.push(`- ${line.text.replace(BULLET, '').trim()}`);
-      else if (ordered) list.push(`${ordered[1]} ${ordered[2].trim()}`);
-      else list.push(`- ${line.text.trim()}`);
+      if (listBase == null) listBase = indent;
+      const level = Math.max(0, Math.round((indent - listBase) / (bodySize * 2)));
+      const prefix = '  '.repeat(level);
+      if (bullet) list.push(`${prefix}- ${line.text.replace(BULLET, '').trim()}`);
+      else if (ordered) list.push(`${prefix}${ordered[1]} ${ordered[2].trim()}`);
+      else list.push(`${prefix}- ${line.text.trim()}`);
       previousParagraphLine = null;
       continue;
     }
