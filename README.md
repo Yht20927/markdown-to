@@ -2,7 +2,7 @@
 
 > [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 136 个回归测试 · 美化增强
+> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 139 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -26,7 +26,7 @@
 | 工具 | 输入 | 特性 | 速度 |
 |------|------|------|------|
 | **html-to-md** | HTML → MD | GFM 表格, KaTeX 源码还原, 任务列表, 表格对齐, 删除线 | <0.3s |
-| **word-to-md** | .docx → MD | GFM 表格 (P0-19 修复) | <1s |
+| **word-to-md** | .docx → MD | GFM 表格, 代码样式还原 (Code Char/Code Block) | <1s |
 | **pdf-to-md** | PDF → MD | 字体/坐标重建标题/列表/表格/代码块，过滤页码，`--allow-empty` | <1s |
 
 ### 表格工具
@@ -188,7 +188,7 @@ markdownFomart/
 ├── REFACTOR_PLAN.md          ← 重构方案（v2.0 蓝图）
 ├── package.json              ← npm workspace 根配置
 ├── shared/                   ← 共享模块（11 个）
-│   ├── __tests__/            ← 共享模块测试（90 个）
+│   ├── __tests__/            ← 共享模块测试（91 个）
 │   ├── html-renderer.js
 │   ├── placeholders.js
 │   ├── gfm-table.js
@@ -226,13 +226,13 @@ markdownFomart/
 ## 测试
 
 ```bash
-# 运行所有测试（136 个）
+# 运行所有测试（139 个）
 npm test
 
-# 仅共享模块测试（90 个）
+# 仅共享模块测试（91 个）
 npm run test:shared
 
-# 仅工具集成测试（46 个）
+# 仅工具集成测试（48 个）
 npm run test:tools
 
 # 语法检查
@@ -273,7 +273,7 @@ npm run lint
 | 批量处理 | 单个文件 | 支持脚本批量 |
 | 集成 | 手动操作 | 可嵌入 CI/脚本 |
 | 主题 | — | 29 个 PDF 主题 + 暗色模式 |
-| 数据正确性 | — | 21 项 P0 bug 修复 + 136 回归测试 |
+| 数据正确性 | — | 21 项 P0 bug 修复 + 139 回归测试 |
 | 收费 | 免费 | 开源 MIT |
 
 ## License

@@ -24,6 +24,19 @@ function createTurndown({ gfmTables = true, headingStyle = 'atx', codeBlockStyle
     replacement: () => ''
   });
 
+  td.addRule('preWithoutCode', {
+    filter: (node) => node.nodeName === 'PRE' && !node.querySelector('code'),
+    replacement: (_content, node) => {
+      const code = textWithBreaks(node).replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+      if (!code) return '';
+      const className = node.getAttribute('class') || '';
+      const language = className.match(/(?:^|\s)language-([\w-]+)/);
+      const longestRun = (code.match(/`{3,}/g) || []).reduce((max, run) => Math.max(max, run.length), 2);
+      const fence = '`'.repeat(longestRun + 1);
+      return `\n\n${fence}${language ? language[1] : ''}\n${code}\n${fence}\n\n`;
+    }
+  });
+
   const cellToMarkdown = (cell) => {
     const raw = td.turndown(cell.innerHTML || '');
     return raw
@@ -39,6 +52,23 @@ function createTurndown({ gfmTables = true, headingStyle = 'atx', codeBlockStyle
   const rowCells = (row) => {
     const cells = row.cells ? Array.from(row.cells) : Array.from(row.querySelectorAll('th, td'));
     return cells.filter((cell) => cell.parentNode === row);
+  };
+
+  const textWithBreaks = (node) => {
+    let text = '';
+    const visit = (current) => {
+      if (current.nodeType === 3) {
+        text += current.nodeValue || '';
+        return;
+      }
+      if (current.nodeName === 'BR') {
+        text += '\n';
+        return;
+      }
+      Array.from(current.childNodes || []).forEach(visit);
+    };
+    visit(node);
+    return text;
   };
 
   const cellAlignment = (cell) => {

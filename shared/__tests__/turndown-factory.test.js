@@ -55,4 +55,12 @@ describe('turndown-factory HTML round-trip extensions', () => {
     const md = convert('<table><thead><tr><th align="left">L</th><th style="text-align:center">C</th><th align="right">R</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody></table>');
     assert.ok(md.includes('| :--- | :---: | ---: |'), md);
   });
+
+  it('converts pre elements without nested code tags to fenced blocks', () => {
+    const md = convert('<pre class="language-js">const x = 1;<br>console.log(x);</pre>');
+    assert.ok(md.includes('```js\nconst x = 1;\nconsole.log(x);\n```'), md);
+
+    const nestedFence = convert('<pre>```<br>code</pre>');
+    assert.ok(nestedFence.includes('````\n```\ncode\n````'), nestedFence);
+  });
 });

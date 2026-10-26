@@ -133,6 +133,7 @@ function baseRun(text, state = {}) {
     bold: state.bold || undefined,
     italics: state.italics || undefined,
     strike: state.strike || undefined,
+    style: state.code ? 'CodeChar' : undefined,
     font: state.code ? 'Consolas' : undefined,
     size: state.code ? 18 : undefined,
     color: state.link ? '0563C1' : undefined,
@@ -306,6 +307,7 @@ function blockChildren(tokens, baseDir, quote = false) {
           codeRuns.push(new TextRun({ text: line, font: 'Consolas', size: 18 }));
         });
         children.push(new Paragraph({
+          style: 'CodeBlock',
           shading: { fill: 'F2F2F2' },
           spacing: { before: 120, after: 120 },
           indent: { left: 240, right: 240 },
@@ -346,6 +348,22 @@ async function markdownToDocx(md, { baseDir = process.cwd(), title = 'Markdown' 
           paragraph: { spacing: { after: 120 } },
         },
       },
+      characterStyles: [{
+        id: 'CodeChar',
+        name: 'Code Char',
+        basedOn: 'DefaultParagraphFont',
+        run: { font: 'Consolas', size: 18 },
+      }],
+      paragraphStyles: [{
+        id: 'CodeBlock',
+        name: 'Code Block',
+        basedOn: 'Normal',
+        paragraph: {
+          spacing: { before: 120, after: 120 },
+          indent: { left: 240, right: 240 },
+        },
+        run: { font: 'Consolas', size: 18 },
+      }],
     },
     sections: [{
       properties: {

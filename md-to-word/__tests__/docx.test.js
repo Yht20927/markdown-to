@@ -34,6 +34,17 @@ describe('md-to-word docx', () => {
     assert.match(numbering, /w:numFmt w:val="bullet"/);
   });
 
+  it('emits semantic styles for inline and block code', async () => {
+    const buffer = await markdownToDocx('Text `code`\n\n```js\nconst x = 1;\n```', { title: 'Code' });
+    const zip = await JSZip.loadAsync(buffer);
+    const document = await zip.file('word/document.xml').async('string');
+    const styles = await zip.file('word/styles.xml').async('string');
+    assert.match(document, /w:rStyle w:val="CodeChar"/);
+    assert.match(document, /w:pStyle w:val="CodeBlock"/);
+    assert.match(styles, /w:styleId="CodeChar"/);
+    assert.match(styles, /w:styleId="CodeBlock"/);
+  });
+
   it('embeds images referenced by data URI', async () => {
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     const buffer = await markdownToDocx(`![dot](data:image/png;base64,${png})`, { title: 'Image' });

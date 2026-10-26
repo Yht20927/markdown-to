@@ -10,6 +10,18 @@ const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'ut
 // Use shared turndown factory with GFM table support
 const turndown = createTurndown();
 
+// Map common Word character/paragraph styles back to semantic HTML so that
+// code styles emitted by md-to-word and typical Word documents survive.
+const styleMap = [
+  "r[style-name='Code Char'] => code",
+  "r[style-name='Code'] => code",
+  "r[style-name='Verbatim Char'] => code",
+  "r[style-name='HTML Code'] => code",
+  "p[style-name='Code Block'] => pre:fresh",
+  "p[style-name='Source Code'] => pre:fresh",
+  "p[style-name='HTML Preformatted'] => pre:fresh",
+];
+
 program
   .name('word-to-md')
   .description('Convert Word (.docx) to Markdown')
@@ -37,6 +49,7 @@ program.command('convert')
       };
       let imageIndex = 0;
       const result = await mammoth.convertToHtml({ buffer: buf }, {
+        styleMap,
         convertImage: mammoth.images.imgElement(async (image) => {
           const base64 = await image.read('base64');
           if (!base64) return { src: '' };

@@ -1,0 +1,27 @@
+const { describe, it } = require('node:test');
+const assert = require('node:assert');
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { markdownToDocx } = require('../../md-to-word/docx');
+
+const cli = path.join(__dirname, '..', 'index.js');
+
+describe('word-to-md CLI', () => {
+  it('restores inline and fenced code from docx styles', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'word-to-md-'));
+    const input = path.join(dir, 'input.docx');
+    const output = path.join(dir, 'output.md');
+    try {
+      fs.writeFileSync(input, await markdownToDocx('Text `code`\n\n```js\nconst x = 1;\n```', { title: 'Code' }));
+      const result = spawnSync(process.execPath, [cli, 'convert', '-i', input, '-o', output], { encoding: 'utf-8' });
+      assert.strictEqual(result.status, 0, result.stderr);
+      const md = fs.readFileSync(output, 'utf-8');
+      assert.ok(md.includes('Text `code`'), md);
+      assert.ok(md.includes('```\nconst x = 1;\n```'), md);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
