@@ -58,6 +58,19 @@ describe('md-to-word docx', () => {
     assert.match(styles, /w:styleId="TableAlignCenter"/);
   });
 
+  it('emits inline and display math styles without touching currency or code', async () => {
+    const buffer = await markdownToDocx('Inline $x_i$ and price $5 and $10.\n\n$$\n\\sum_{i=1}^n i\n$$\n\n```js\nconst x = "$no$";\n```', { title: 'Math' });
+    const zip = await JSZip.loadAsync(buffer);
+    const document = await zip.file('word/document.xml').async('string');
+    const styles = await zip.file('word/styles.xml').async('string');
+    assert.match(document, /w:rStyle w:val="InlineMath"/);
+    assert.match(document, /w:pStyle w:val="MathBlock"/);
+    assert.match(document, /price \$5 and \$10\./);
+    assert.match(document, /const x = &quot;\$no\$&quot;;/);
+    assert.match(styles, /w:styleId="InlineMath"/);
+    assert.match(styles, /w:styleId="MathBlock"/);
+  });
+
   it('embeds images referenced by data URI', async () => {
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     const buffer = await markdownToDocx(`![dot](data:image/png;base64,${png})`, { title: 'Image' });

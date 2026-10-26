@@ -11,7 +11,7 @@ triggers:
 
 # md-to-word Skill
 
-Convert Markdown to native Word `.docx` (OOXML) or MSO-compatible HTML-as-`.doc`. The `.docx` path supports headings, tables, lists, images, links, code blocks, quote blocks, table alignment, and TeX math source.
+Convert Markdown to native Word `.docx` (OOXML) or MSO-compatible HTML-as-`.doc`. The `.docx` path supports headings, tables, lists, images, links, code blocks, quote blocks, table alignment, and inline/display math.
 
 ## Usage
 
@@ -23,4 +23,4 @@ node index.js convert -i input.md -o output.docx
 node index.js convert -i input.md -o output.doc
 ```
 
-Open either file in Microsoft Word or LibreOffice. `.docx` preserves native headings, tables, lists, images, hyperlinks, code blocks, and TeX math source.
+Open either file in Microsoft Word or LibreOffice. `.docx` preserves native headings, tables, lists, images, hyperlinks, code blocks, and inline/display math source.

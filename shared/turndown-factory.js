@@ -16,6 +16,15 @@ const TurndownService = require('turndown');
  * @param {boolean} [options.codeBlockStyle='fenced'] - Code block style
  * @returns {TurndownService}
  */
+function unescapeMath(text) {
+  return String(text || '').replace(/\\([\\`*_[\]{}()#+\-.!|>~])/g, '$1');
+}
+
+function hasClass(node, name) {
+  const className = node.getAttribute ? node.getAttribute('class') || '' : '';
+  return className.split(/\s+/).includes(name);
+}
+
 function createTurndown({ gfmTables = true, headingStyle = 'atx', codeBlockStyle = 'fenced' } = {}) {
   const td = new TurndownService({ headingStyle, codeBlockStyle });
 
@@ -111,6 +120,16 @@ function createTurndown({ gfmTables = true, headingStyle = 'atx', codeBlockStyle
       }
       return display ? `\n\n$$\n${tex}\n$$\n\n` : `$${tex}$`;
     }
+  });
+
+  td.addRule('texMathInline', {
+    filter: (node) => hasClass(node, 'math-inline'),
+    replacement: (content) => `$${unescapeMath(content)}$`
+  });
+
+  td.addRule('texMathDisplay', {
+    filter: (node) => hasClass(node, 'math-display'),
+    replacement: (content) => `\n\n$$\n${unescapeMath(content).trim()}\n$$\n\n`
   });
 
   td.addRule('strikethrough', {

@@ -44,6 +44,12 @@ describe('turndown-factory HTML round-trip extensions', () => {
     assert.ok(!md.includes('katex'), md);
   });
 
+  it('restores TeX source from math-inline and math-display markup', () => {
+    const md = convert('<p>Value <span class="math math-inline">x_i</span>.</p><div class="math math-display">\\sum_{i=1}^n i</div>');
+    assert.ok(md.includes('Value $x_i$.'), md);
+    assert.ok(md.includes('$$\n\\sum_{i=1}^n i\n$$'), md);
+  });
+
   it('preserves task list checkboxes and strikethrough', () => {
     const md = convert('<p><del>gone</del></p><ul><li><input checked disabled type="checkbox"> done</li><li><input disabled type="checkbox"> todo</li></ul>');
     assert.ok(md.includes('~~gone~~'), md);

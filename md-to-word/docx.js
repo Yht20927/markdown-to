@@ -19,7 +19,34 @@ const {
   LevelFormat,
 } = require('docx');
 
-const marked = new Marked({ gfm: true, breaks: true });
+const mathExtensions = [
+  {
+    name: 'mathBlock',
+    level: 'block',
+    start(src) {
+      const match = /(?:^|\n)[ \t]*\$\$/.exec(src);
+      return match ? match.index + match[0].indexOf('$$') : undefined;
+    },
+    tokenizer(src) {
+      const match = /^\$\$(?:[ \t]*\n)?((?:(?!\$\$)[\s\S])*?)[ \t]*\$\$[ \t]*(?:\n+|$)/.exec(src);
+      return match ? { type: 'mathBlock', raw: match[0], text: match[1].trim() } : undefined;
+    },
+  },
+  {
+    name: 'mathInline',
+    level: 'inline',
+    start(src) {
+      const index = src.indexOf('$');
+      return index < 0 ? undefined : index;
+    },
+    tokenizer(src) {
+      const match = /^\$(?![\s$])([^\n$]*?)(?<![\s\\])\$(?!\$)/.exec(src);
+      return match ? { type: 'mathInline', raw: match[0], text: match[1] } : undefined;
+    },
+  },
+];
+
+const marked = new Marked({ gfm: true, breaks: true, extensions: mathExtensions });
 
 const listLevels = (format, text) => Array.from({ length: 5 }, (_, level) => ({
   level,
@@ -141,6 +168,15 @@ function baseRun(text, state = {}) {
   };
 }
 
+function mathRuns(text, style = 'InlineMath') {
+  const runs = [];
+  String(text || '').split('\n').forEach((line, index) => {
+    if (index > 0) runs.push(new TextRun({ break: 1 }));
+    if (line) runs.push(new TextRun({ text: line, style: style || undefined }));
+  });
+  return runs;
+}
+
 function inlineRuns(tokens, baseDir, state = {}) {
   const runs = [];
   const pushText = (value, extra = {}) => {
@@ -169,6 +205,9 @@ function inlineRuns(tokens, baseDir, state = {}) {
         break;
       case 'codespan':
         pushText(token.text, { code: true });
+        break;
+      case 'mathInline':
+        runs.push(...mathRuns(token.text));
         break;
       case 'br':
         runs.push(new TextRun({ break: 1 }));
@@ -306,6 +345,13 @@ function blockChildren(tokens, baseDir, quote = false) {
       case 'table':
         children.push(tableBlock(token, baseDir));
         break;
+      case 'mathBlock':
+        children.push(new Paragraph({
+          ...quoteOptions,
+          style: 'MathBlock',
+          children: mathRuns(token.text, null),
+        }));
+        break;
       case 'code': {
         const codeRuns = [];
         String(token.text || '').split('\n').forEach((line, index) => {
@@ -362,6 +408,11 @@ async function markdownToDocx(md, { baseDir = process.cwd(), title = 'Markdown' 
         name: 'Code Char',
         basedOn: 'DefaultParagraphFont',
         run: { font: 'Consolas', size: 18 },
+      }, {
+        id: 'InlineMath',
+        name: 'Inline Math',
+        basedOn: 'DefaultParagraphFont',
+        run: { font: 'Cambria Math', size: 22 },
       }],
       paragraphStyles: [{
         id: 'CodeBlock',
@@ -392,6 +443,15 @@ async function markdownToDocx(md, { baseDir = process.cwd(), title = 'Markdown' 
             left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC', space: 12 },
           },
         },
+      }, {
+        id: 'MathBlock',
+        name: 'Math Block',
+        basedOn: 'Normal',
+        paragraph: {
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 120, after: 120 },
+        },
+        run: { font: 'Cambria Math', size: 22 },
       }, {
         id: 'TableAlignLeft',
         name: 'Table Align Left',
