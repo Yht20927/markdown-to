@@ -49,6 +49,7 @@ program
   .requiredOption('-i, --input <file>', 'Input Markdown file')
   .requiredOption('-o, --output <file>', 'Output file (.pdf or .html for preview)')
   .option('-t, --theme <name>', 'Theme ID (default: github-dark-sans-modern-standard)', 'github-dark-sans-modern-standard')
+  .option('--allow-remote', 'Allow remote images/fonts (JavaScript stays disabled)')
   .action(async (opts) => {
     const inputPath = path.resolve(opts.input);
     const outputPath = path.resolve(opts.output);
@@ -59,7 +60,9 @@ program
 
     try {
       const startTime = Date.now();
-      const { template } = await convertFile(inputPath, outputPath, opts.theme);
+      const { template } = await convertFile(inputPath, outputPath, opts.theme, {
+        allowRemote: Boolean(opts.allowRemote),
+      });
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
       console.log(`Template: ${template.name.en} (${template.fonts.heading} / ${template.fonts.body})`);
       console.log(`Done in ${elapsed}s`);

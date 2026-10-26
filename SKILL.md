@@ -27,10 +27,10 @@ triggers:
 | **md-to-pdf** | PDF (29 themes) | marked + puppeteer + katex | ~3s |
 | **md-to-word** | Word .doc | marked + katex + hljs | <0.5s |
 | **md-to-html** | HTML5 | marked + katex + hljs | <0.5s |
-| **md-to-image** | PNG / JPG | marked + puppeteer | ~2s |
+| **md-to-image** | PNG / JPG | marked + puppeteer + katex | ~2s |
 | **md-to-text** | Plain Text | regex (md-to.com同逻辑) | <0.1s |
-| **md-to-latex** | LaTeX .tex | marked | <0.3s |
-| **md-to-rst** | reStructuredText | marked | <0.3s |
+| **md-to-latex** | LaTeX .tex | regex pipeline | <0.3s |
+| **md-to-rst** | reStructuredText | regex pipeline | <0.3s |
 | **md-to-confluence** | Confluence wiki | regex | <0.2s |
 
 ### Other Formats → Markdown
@@ -48,8 +48,8 @@ triggers:
 | **csv-to-md** | CSV → MD Table | pure JS | <0.1s |
 | **md-table-to-csv** | MD Table → CSV | pure JS | <0.1s |
 | **json-to-md** | JSON → MD Table | pure JS | <0.1s |
-| **md-table-to-image** | MD Table → PNG | marked + puppeteer | ~2s |
-| **md-table-to-pdf** | MD Table → PDF | marked + puppeteer | ~2s |
+| **md-table-to-image** | MD Table → PNG | marked + puppeteer + katex | ~2s |
+| **md-table-to-pdf** | MD Table → PDF | marked + puppeteer + katex | ~2s |
 
 ## Trigger
 
@@ -68,6 +68,12 @@ node md-to-pdf/index.js convert -i in.md -o out.pdf -t <theme>
 
 # csv-to-md extras:
 node csv-to-md/index.js convert -i in.csv -o out.md -d ','   # Specify delimiter
+
+# word-to-md extras:
+node word-to-md/index.js convert -i in.docx -o out.md --assets ./images
+
+# Browser tools: remote images/fonts are blocked by default
+node md-to-pdf/index.js convert -i in.md -o out.pdf --allow-remote
 ```
 
 ## Directory Layout

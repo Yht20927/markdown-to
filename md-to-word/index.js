@@ -5,6 +5,7 @@ const katex = require('katex');
 const hljs = require('highlight.js');
 const { createRenderer } = require('../shared/html-renderer');
 const { buildHtmlPage } = require('../shared/html-page');
+const { stripFrontmatter } = require('../shared/frontmatter');
 const fs = require('fs');
 const path = require('path');
 
@@ -96,7 +97,7 @@ program.command('convert')
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
     if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
-    const md = fs.readFileSync(input, 'utf-8');
+    const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
     const bodyHtml = renderMarkdown(md);
 
     // Word namespace XML + mso CSS

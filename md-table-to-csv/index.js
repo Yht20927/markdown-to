@@ -3,6 +3,7 @@ const { program } = require('commander');
 const fs = require('fs');
 const path = require('path');
 const { resolveInOut, readInput, writeOutput, handleError } = require('../shared/cli');
+const { stripFrontmatter } = require('../shared/frontmatter');
 const { writeCsv, escapeCsvCell } = require('../shared/csv');
 const { parseTables } = require('../shared/md-table-parser');
 
@@ -33,7 +34,7 @@ program.command('convert')
   .action(async (opts) => {
     try {
       const { input, output } = resolveInOut(opts);
-      const md = readInput(input);
+      const md = stripFrontmatter(readInput(input));
       const result = markdownTableToCSV(md);
       writeOutput(output, result);
     } catch (e) { handleError(e); }

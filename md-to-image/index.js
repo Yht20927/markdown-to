@@ -3,9 +3,11 @@ const { program } = require('commander');
 const { Marked } = require('marked');
 const katex = require('katex');
 const hljs = require('highlight.js');
-const { createRenderer } = require('../shared/html-renderer');
+const { createRenderer, inlineLocalImages } = require('../shared/html-renderer');
 const { withPage } = require('../shared/browser-pool');
+const { buildMathHeadExtras } = require('../shared/math-assets');
 const { buildHtmlPage } = require('../shared/html-page');
+const { stripFrontmatter } = require('../shared/frontmatter');
 const fs = require('fs');
 const path = require('path');
 
@@ -18,8 +20,8 @@ function buildCss({ padding, bg }) {
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       font-size: 14px; color: #1F2937; line-height: 1.6;
-      padding: ${padding}px; margin: 0;
-      max-width: 800px; background: ${bg};
+      padding: ${padding}px; margin: 0; box-sizing: border-box;
+      width: 100%; max-width: 100%; background: ${bg};
     }
     h1 { font-size: 28px; color: #111; margin-top: 24px; margin-bottom: 12px; }
     h2 { font-size: 22px; color: #222; margin-top: 20px; margin-bottom: 10px; }
@@ -33,6 +35,8 @@ function buildCss({ padding, bg }) {
     img { max-width: 100%; }
     a { color: #0969DA; }
     .watermark { position: fixed; bottom: 20px; right: 20px; font-size: 12px; color: rgba(0,0,0,.15); pointer-events: none; z-index: 999; }
+    .katex-display { margin: 12px 0; }
+    .katex { font-size: 1.1em; }
   `;
 }
 
@@ -50,6 +54,7 @@ program.command('convert')
   .option('--padding <px>', 'Page padding in pixels', '48')
   .option('--bg <color>', 'Background color (CSS value)', '#ffffff')
   .option('--watermark <text>', 'Watermark text in bottom-right corner')
+  .option('--allow-remote', 'Allow remote images/fonts (JavaScript stays disabled)')
   .action(async (opts) => {
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
@@ -59,24 +64,25 @@ program.command('convert')
       console.error('Output must be .png or .jpg'); process.exit(1);
     }
 
-    const md = fs.readFileSync(input, 'utf-8');
+    const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
     const bodyHtml = renderMarkdown(md);
     const watermarkHtml = opts.watermark
       ? `<div class="watermark">${opts.watermark.replace(/</g, '&lt;')}</div>`
       : '';
     const css = buildCss({ padding: parseInt(opts.padding), bg: opts.bg });
-    const fullHtml = buildHtmlPage({
+    const fullHtml = inlineLocalImages(buildHtmlPage({
       body: bodyHtml + watermarkHtml,
       css,
       title: 'Markdown to Image',
-    });
+      headExtra: buildMathHeadExtras({ dark: false }),
+    }), path.dirname(input));
 
     try {
-      const scale = parseInt(opts.scale) || 1;
-      const width = parseInt(opts.width);
+      const scale = Math.max(0.1, parseFloat(opts.scale) || 1);
+      const width = Math.max(1, parseInt(opts.width, 10) || 800);
       await withPage(async (page) => {
         await page.setViewport({
-          width: width * scale,
+          width,
           height: 100,
           deviceScaleFactor: scale,
         });
@@ -84,14 +90,14 @@ program.command('convert')
 
         const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
         await page.setViewport({
-          width: width * scale,
+          width,
           height: Math.ceil(bodyHeight) + 50,
           deviceScaleFactor: scale,
         });
 
         const format = ext === '.png' ? 'png' : 'jpeg';
         await page.screenshot({ path: output, fullPage: true, type: format, omitBackground: false });
-      });
+      }, { allowRemote: Boolean(opts.allowRemote) });
       console.log(`Done: ${output}`);
     } catch (e) {
       console.error('Error:', e.message);

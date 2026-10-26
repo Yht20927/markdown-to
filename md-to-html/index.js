@@ -5,6 +5,7 @@ const katex = require('katex');
 const hljs = require('highlight.js');
 const { createRenderer } = require('../shared/html-renderer');
 const { buildHtmlPage } = require('../shared/html-page');
+const { stripFrontmatter } = require('../shared/frontmatter');
 const fs = require('fs');
 const path = require('path');
 
@@ -22,6 +23,9 @@ const lightCss = `
     --table-border: #D0D7DE; --table-row-alt: #F6F8FA;
     --accent: #0969DA; --muted: #656D76;
   }
+`;
+
+const autoCss = lightCss + `
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #0D1117; --text: #C9D1D9; --heading: #C9D1D9;
@@ -91,9 +95,9 @@ const baseCss = `
   }
 `;
 
-function markdownToHtml(md, { dark = false } = {}) {
+function markdownToHtml(md, { theme = 'light' } = {}) {
   const body = renderMarkdown(md);
-  const themeCss = dark ? darkCss : lightCss;
+  const themeCss = theme === 'dark' ? darkCss : theme === 'auto' ? autoCss : lightCss;
   return buildHtmlPage({
     body,
     css: themeCss + baseCss,
@@ -116,9 +120,8 @@ program.command('convert')
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
     if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
-    const md = fs.readFileSync(input, 'utf-8');
-    const dark = opts.theme === 'dark';
-    const html = markdownToHtml(md, { dark });
+    const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
+    const html = markdownToHtml(md, { theme: opts.theme });
     fs.writeFileSync(output, html, 'utf-8');
     console.log(`Done: ${output} (${Buffer.byteLength(html)} bytes)`);
   });

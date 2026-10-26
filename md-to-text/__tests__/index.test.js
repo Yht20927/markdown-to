@@ -45,4 +45,29 @@ describe('md-to-text P0 fixes', () => {
     assert.ok(!text.includes('img'));
     assert.ok(!text.includes('a.png'));
   });
+  it('should preserve snake_case identifiers and inline math', () => {
+    const text = runConvert('name is snake_case_name and $x_i$');
+    assert.ok(text.includes('snake_case_name'), text);
+    assert.ok(text.includes('x_i'), text);
+  });
+
+  it('should preserve ordered list numbers and nested bullets', () => {
+    const text = runConvert('1. first\n2. second\n\n- one\n  - nested');
+    assert.ok(text.includes('1. first'), text);
+    assert.ok(text.includes('2. second'), text);
+    assert.ok(text.includes('  • nested'), text);
+  });
+
+  it('should render GFM tables as readable rows', () => {
+    const text = runConvert('| A | B |\n|---|:--:|\n| a | b |');
+    assert.ok(text.includes('A | B'), text);
+    assert.ok(text.includes('a | b'), text);
+    assert.ok(!text.includes('---'), text);
+  });
+
+  it('should replace footnote references and append definitions', () => {
+    const text = runConvert('Text [^1]\n\n[^1]: note');
+    assert.ok(text.includes('Text [1]'), text);
+    assert.ok(text.includes('[1] note'), text);
+  });
 });

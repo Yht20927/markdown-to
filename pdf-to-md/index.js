@@ -36,7 +36,7 @@ program.command('convert')
           process.exit(1);
         }
       }
-      fs.writeFileSync(output, text, 'utf-8');
+      fs.writeFileSync(output, text.endsWith('\n') ? text : text + '\n', 'utf-8');
       console.log(`Done: ${output} (${text.length} chars, ${data.numpages} pages)`);
     } catch (e) { handleError(e); }
   });

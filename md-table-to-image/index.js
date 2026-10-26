@@ -3,9 +3,11 @@ const { program } = require('commander');
 const { Marked } = require('marked');
 const katex = require('katex');
 const hljs = require('highlight.js');
-const { createRenderer } = require('../shared/html-renderer');
+const { createRenderer, inlineLocalImages } = require('../shared/html-renderer');
 const { withPage } = require('../shared/browser-pool');
+const { buildMathHeadExtras } = require('../shared/math-assets');
 const { buildHtmlPage } = require('../shared/html-page');
+const { stripFrontmatter } = require('../shared/frontmatter');
 const fs = require('fs');
 const path = require('path');
 
@@ -36,6 +38,7 @@ program.command('convert')
   .description('Convert a Markdown table to image')
   .requiredOption('-i, --input <file>', 'Input Markdown file (tables only or full MD)')
   .requiredOption('-o, --output <file>', 'Output image file (.png or .jpg)')
+  .option('--allow-remote', 'Allow remote images/fonts (JavaScript stays disabled)')
   .action(async (opts) => {
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
@@ -45,19 +48,32 @@ program.command('convert')
       console.error('Output must be .png or .jpg'); process.exit(1);
     }
 
-    const md = fs.readFileSync(input, 'utf-8');
+    const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
     const bodyHtml = renderMarkdown(md);
-    const fullHtml = buildHtmlPage({ body: bodyHtml, css: pageCss, title: 'Markdown Table to Image' });
+    const fullHtml = inlineLocalImages(buildHtmlPage({
+      body: bodyHtml,
+      css: pageCss,
+      title: 'Markdown Table to Image',
+      headExtra: buildMathHeadExtras({ dark: false }),
+    }), path.dirname(input));
 
     try {
       await withPage(async (page) => {
         await page.setViewport({ width: 900, height: 100 });
         await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
-        const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
-        await page.setViewport({ width: 900, height: Math.ceil(bodyHeight) + 40 });
+        const [bodyHeight, scrollWidth] = await page.evaluate(() => [
+          document.body.scrollHeight,
+          Math.max(document.body.scrollWidth, document.documentElement.scrollWidth),
+        ]);
+        const width = Math.max(900, Math.ceil(scrollWidth) + 40);
+        await page.setViewport({ width, height: Math.ceil(bodyHeight) + 40 });
+        const finalHeight = await page.evaluate(() => document.body.scrollHeight);
+        if (Math.ceil(finalHeight) + 40 > Math.ceil(bodyHeight) + 40) {
+          await page.setViewport({ width, height: Math.ceil(finalHeight) + 40 });
+        }
         const format = ext === '.png' ? 'png' : 'jpeg';
         await page.screenshot({ path: output, fullPage: true, type: format, omitBackground: false });
-      });
+      }, { allowRemote: Boolean(opts.allowRemote) });
       console.log(`Done: ${output}`);
     } catch (e) {
       console.error('Error:', e.message);

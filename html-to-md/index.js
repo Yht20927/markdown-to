@@ -24,7 +24,7 @@ program.command('convert')
     if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
     const html = fs.readFileSync(input, 'utf-8');
     const md = turndown.turndown(html);
-    fs.writeFileSync(output, md, 'utf-8');
+    fs.writeFileSync(output, md.endsWith('\n') ? md : md + '\n', 'utf-8');
     console.log(`Done: ${output} (${md.length} chars)`);
   });
 

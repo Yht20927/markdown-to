@@ -25,7 +25,7 @@
   "scripts": {
     "test": "node --test shared/__tests__/*.test.js */__tests__/*.test.js",
     "test:shared": "node --test shared/__tests__/*.test.js",
-    "test:tools": "node --test */__tests__/*.test.js",
+    "test:tools": "node --test $(find . -path ./node_modules -prune -o -path ./shared -prune -o -path '*/__tests__/*.test.js' -print)",
     "lint": "for f in shared/*.js */*.js; do node -c \"$f\" || exit 1; done && echo 'All files pass syntax check'"
   },
   "devDependencies": {

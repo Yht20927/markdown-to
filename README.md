@@ -1,8 +1,8 @@
 # Markdown Format Converter Suite
 
-> [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，100% 本地运行，隐私安全、无需联网。
+> [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：8 个 shared 模块 · 21 个数据正确性修复 · 84 个回归测试 · 美化增强
+> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 124 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -42,11 +42,29 @@
 ### npm workspace（推荐）
 
 ```bash
-# 在项目根目录一次性安装所有依赖
-npm install --ignore-scripts
+# 在项目根目录一次性安装所有依赖（会下载 Puppeteer 自带的 Chrome）
+npm install
 ```
 
-`--ignore-scripts` 可跳过 Puppeteer 的 Chromium 自动下载（如已手动安装 Chromium）。
+如果本机已经安装 Chrome/Chromium，可跳过下载并让工具自动探测系统浏览器：
+
+```bash
+PUPPETEER_SKIP_DOWNLOAD=1 npm install
+```
+
+也可显式指定浏览器路径：
+
+```bash
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+```
+
+如果没有任何可用浏览器，手动安装：
+
+```bash
+npx puppeteer browsers install chrome
+```
+
+浏览器类工具默认禁用 JavaScript，并阻止远程图片/字体请求；确实需要远程资源时加 `--allow-remote`。
 
 ### 单工具安装
 
@@ -139,6 +157,8 @@ node pdf-to-md/index.js convert -i in.pdf -o out.md --allow-empty
 | `md-table-parser.js` | MD 表格解析 (parseTables) | md-table-to-csv |
 | `csv.js` | RFC 4180 CSV 解析器+写入器 | csv-to-md, md-table-to-csv |
 | `turndown-factory.js` | 反向转换共享工厂 | html-to-md, word-to-md |
+| `frontmatter.js` | YAML frontmatter 剥离 | 全部 Markdown 读取工具 |
+| `math-assets.js` | KaTeX 字体内联 + hljs 主题 | md-to-pdf/image, md-table-to-image/pdf |
 | `browser-pool.js` | Puppeteer 单例池 | md-to-image/pdf, md-table-to-image/pdf |
 | `html-page.js` | HTML 文档外壳 | md-to-html/word/image |
 | `cli.js` | 统一 CLI 工具 | 全部 16 工具 |
@@ -150,14 +170,16 @@ markdownFomart/
 ├── README.md
 ├── REFACTOR_PLAN.md          ← 重构方案（v2.0 蓝图）
 ├── package.json              ← npm workspace 根配置
-├── shared/                   ← 共享模块（8 个）
-│   ├── __tests__/            ← 共享模块测试（55 个）
+├── shared/                   ← 共享模块（11 个）
+│   ├── __tests__/            ← 共享模块测试（86 个）
 │   ├── html-renderer.js
 │   ├── placeholders.js
 │   ├── gfm-table.js
 │   ├── md-table-parser.js
 │   ├── csv.js
 │   ├── turndown-factory.js
+│   ├── frontmatter.js
+│   ├── math-assets.js
 │   ├── browser-pool.js
 │   ├── html-page.js
 │   └── cli.js
@@ -187,13 +209,13 @@ markdownFomart/
 ## 测试
 
 ```bash
-# 运行所有测试（84 个）
+# 运行所有测试（124 个）
 npm test
 
-# 仅共享模块测试（55 个）
+# 仅共享模块测试（86 个）
 npm run test:shared
 
-# 仅工具集成测试（17 个）
+# 仅工具集成测试（38 个）
 npm run test:tools
 
 # 语法检查
@@ -202,16 +224,17 @@ npm run lint
 
 ## v2.0 更新日志
 
-### 数据正确性 (21 P0 修复)
+### 数据正确性 (多项 P0 修复)
 - 表格工具：空 cell 保留、`\|` 转义、RFC 4180 CSV 引号、BOM、引号内分隔符检测
 - 文本工具：图片/链接顺序修正、代码块占位符保护、粗斜体 `***` 嵌套
 - LaTeX/RST：特殊字符转义、标题下划线长度匹配、脚注配对、CJK 支持
 - 反向转换：GFM 表格 rule 补齐、无 thead 表格处理
 
 ### 架构统一
-- 抽取 8 个 shared 模块消除重复代码
+- 抽取 11 个 shared 模块消除重复代码
 - 全部 16 工具使用统一 CLI (`shared/cli.js`)
 - npm workspace 统一依赖版本
+- 浏览器工具默认禁用 JavaScript 与远程请求，显式 `--allow-remote` 才放行
 
 ### 美化
 - **PDF**: 代码块圆角+阴影+语言标签、表格斑马纹+sticky 表头、引用块彩色边框、admonition 块、封面页/TOC/页码 CSS

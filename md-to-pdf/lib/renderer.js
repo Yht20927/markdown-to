@@ -2,9 +2,14 @@ const { Marked } = require('marked');
 const katex = require('katex');
 const hljs = require('highlight.js');
 const { createRenderer } = require('../../shared/html-renderer');
+const { buildMathHeadExtras, isDarkTemplate } = require('../../shared/math-assets');
 const { getTemplate } = require('./templates');
 
 const { escapeHtml, renderMarkdown } = createRenderer({ Marked, katex, hljs });
+
+function safeColor(value) {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value || '') ? value : '#ffffff';
+}
 
 function buildCss(template) {
   const { colors, fonts, fontSizes, spacing } = template;
@@ -25,9 +30,9 @@ function buildCss(template) {
       --t-table-border: ${colors.tableBorder};
       --t-table-row-odd: ${colors.tableRowOdd};
       --t-table-row-even: ${colors.tableRowEven};
-      --t-font-heading: "${fonts.heading}", serif;
-      --t-font-body: "${fonts.body}", sans-serif;
-      --t-font-code: "${fonts.code}", monospace;
+      --t-font-heading: "${fonts.heading}", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --t-font-body: "${fonts.body}", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --t-font-code: "${fonts.code}", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
       --t-h1: ${fontSizes.h1}pt;
       --t-h2: ${fontSizes.h2}pt;
       --t-h3: ${fontSizes.h3}pt;
@@ -41,9 +46,15 @@ function buildCss(template) {
       --t-para-before: ${spacing.paragraphBefore}pt;
       --t-para-after: ${spacing.paragraphAfter}pt;
       --t-line-height: ${spacing.lineHeight};
+      --t-bg: ${safeColor(colors.background)};
+    }
+
+    html, body {
+      background: var(--t-bg);
     }
 
     body {
+      background: var(--t-bg);
       font-family: var(--t-font-body);
       font-size: var(--t-body);
       color: var(--t-text);
@@ -213,8 +224,9 @@ function buildCss(template) {
     .toc li { margin-bottom: 4pt; }
     .toc a { color: var(--t-link); text-decoration: none; }
 
-    /* Page numbers via @page */
+    /* Page background / numbers via @page */
     @page {
+      background: ${safeColor(colors.background)};
       @bottom-right {
         content: counter(page);
         font-size: 9pt;
@@ -228,39 +240,23 @@ function buildCss(template) {
   `;
 }
 
-// F-1: Inject KaTeX CSS and hljs theme CSS for math/code rendering
-// Inline CSS for Puppeteer compatibility (file:// links don't always work)
-function buildHeadExtras(template) {
-  const fs = require('fs');
-  let katexCss = '';
-  let hljsCss = '';
-  try {
-    katexCss = fs.readFileSync(require.resolve('katex/dist/katex.min.css'), 'utf-8');
-  } catch { /* KaTeX not available */ }
-  try {
-    const isDark = template.id.includes('dark');
-    const hljsTheme = isDark ? 'atom-one-dark' : 'atom-one-light';
-    hljsCss = fs.readFileSync(require.resolve('highlight.js/styles/' + hljsTheme + '.css'), 'utf-8');
-  } catch { /* hljs theme not available */ }
-  return `<style>${katexCss}</style>\n  <style>${hljsCss}</style>`;
-}
-
-function renderHtml(md, templateId) {
+function renderHtml(md, templateId, title = 'Markdown to PDF', baseHref = '') {
   const template = getTemplate(templateId);
 
   // A7: Use shared renderMarkdown instead of duplicating marked/math/code logic
   const bodyHtml = renderMarkdown(md);
 
   const css = buildCss(template);
-  const headExtras = buildHeadExtras(template);
+  const headExtras = buildMathHeadExtras({ dark: isDarkTemplate(template) });
+  const baseTag = baseHref ? `  <base href="${escapeHtml(baseHref)}">\n` : '';
 
   const fullPage = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Markdown to PDF</title>
-  ${headExtras}
+  <title>${escapeHtml(title)}</title>
+${baseTag}  ${headExtras}
   <style>${css}</style>
 </head>
 <body>

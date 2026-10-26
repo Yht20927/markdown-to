@@ -19,6 +19,7 @@ program.command('convert')
   .description('Convert a .docx file to Markdown')
   .requiredOption('-i, --input <file>', 'Input .docx file')
   .requiredOption('-o, --output <file>', 'Output Markdown file')
+  .option('--assets <dir>', 'Directory for extracted images (default: <output>.assets)')
   .action(async (opts) => {
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
@@ -26,9 +27,29 @@ program.command('convert')
     if (!input.toLowerCase().endsWith('.docx')) { console.error('Input must be a .docx file'); process.exit(1); }
     try {
       const buf = fs.readFileSync(input);
-      const result = await mammoth.convertToHtml({ buffer: buf });
+      const assetsDir = path.resolve(
+        opts.assets || path.join(path.dirname(output), path.basename(output, path.extname(output)) + '.assets')
+      );
+      const extByType = {
+        'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp',
+        'image/svg+xml': 'svg', 'image/bmp': 'bmp', 'image/tiff': 'tiff',
+        'image/x-emf': 'emf', 'image/x-wmf': 'wmf'
+      };
+      let imageIndex = 0;
+      const result = await mammoth.convertToHtml({ buffer: buf }, {
+        convertImage: mammoth.images.imgElement(async (image) => {
+          const base64 = await image.read('base64');
+          if (!base64) return { src: '' };
+          const ext = extByType[image.contentType] || 'bin';
+          const filename = `image-${++imageIndex}.${ext}`;
+          fs.mkdirSync(assetsDir, { recursive: true });
+          fs.writeFileSync(path.join(assetsDir, filename), Buffer.from(base64, 'base64'));
+          const src = path.relative(path.dirname(output), path.join(assetsDir, filename)).split(path.sep).join('/');
+          return { src };
+        })
+      });
       const md = turndown.turndown(result.value);
-      fs.writeFileSync(output, md, 'utf-8');
+      fs.writeFileSync(output, md.endsWith('\n') ? md : md + '\n', 'utf-8');
       console.log(`Done: ${output} (${md.length} chars)`);
       if (result.messages.length > 0) console.log('Messages:', result.messages.map(m => m.message).join('; '));
     } catch (e) {

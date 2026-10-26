@@ -15,7 +15,7 @@
  * @returns {string[]} Array of cell values
  */
 function splitTableCells(row) {
-  const trimmed = row.replace(/^\|/, '').replace(/\|$/, '');
+  const trimmed = row.trim().replace(/^\|/, '').replace(/\|$/, '');
   const cells = [];
   let current = '';
   for (let i = 0; i < trimmed.length; i++) {
@@ -54,7 +54,9 @@ function parseAlignment(cell) {
  * @returns {boolean}
  */
 function isSeparatorRow(line) {
-  return /^\|[\s\-:|]+\|$/.test(line.trim());
+  const trimmed = line.trim();
+  if (!trimmed.includes('|') || !trimmed.includes('-')) return false;
+  return splitTableCells(trimmed).every((cell) => /^:?-{1,}:?$/.test(cell));
 }
 
 /**
@@ -64,46 +66,48 @@ function isSeparatorRow(line) {
  * @returns {Array<{headers: string[], aligns: Array<string|null>, rows: string[][]}>}
  */
 function parseTables(md) {
-  const tableRegex = /^\|.+\|\s*$(?:\n^\|[- :|]+\|\s*$(?:\n^\|.+\|\s*$)*)?/gm;
-  const tables = md.match(tableRegex);
-  if (!tables || tables.length === 0) return [];
-
+  const lines = md.replace(/\r\n?/g, '\n').split('\n');
   const results = [];
+  let fence = null;
 
-  for (const table of tables) {
-    const lines = table.trim().split('\n');
-    if (lines.length < 2) continue;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
 
-    // Filter out separator rows
-    const dataLines = [];
-    let alignLine = null;
-
-    for (const line of lines) {
-      if (isSeparatorRow(line)) {
-        alignLine = line;
-      } else {
-        dataLines.push(line);
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!fence) {
+        fence = { char: fenceMatch[1][0], length: fenceMatch[1].length };
+      } else if (fence.char === fenceMatch[1][0] && fenceMatch[1].length >= fence.length) {
+        fence = null;
       }
+      continue;
     }
+    if (fence) continue;
+    if (/^(?: {4}|\t)/.test(line)) continue;
 
-    if (dataLines.length === 0) continue;
+    if (!line.includes('|') || i + 1 >= lines.length || !isSeparatorRow(lines[i + 1])) continue;
 
-    // Parse headers from first data line
-    const headers = splitTableCells(dataLines[0]);
+    const headers = splitTableCells(line);
+    if (headers.length === 0) continue;
 
-    // Parse alignments from separator row
-    let aligns = [];
-    if (alignLine) {
-      const sepCells = splitTableCells(alignLine);
-      aligns = sepCells.map(parseAlignment);
-    }
-    // Pad aligns to match header count
+    const aligns = splitTableCells(lines[i + 1]).map(parseAlignment);
     while (aligns.length < headers.length) aligns.push(null);
 
-    // Parse data rows (skip header)
-    const rows = dataLines.slice(1).map(splitTableCells);
+    const rows = [];
+    i += 2;
+    while (i < lines.length) {
+      const rowLine = lines[i];
+      if (!rowLine.trim() || !rowLine.includes('|')) break;
+      if (i + 1 < lines.length && isSeparatorRow(lines[i + 1])) break;
+      const cells = splitTableCells(rowLine);
+      while (cells.length < headers.length) cells.push('');
+      rows.push(cells.slice(0, headers.length));
+      i++;
+    }
+    i--;
 
-    results.push({ headers, aligns, rows });
+    results.push({ headers, aligns: aligns.slice(0, headers.length), rows });
   }
 
   return results;

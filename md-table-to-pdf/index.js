@@ -3,9 +3,11 @@ const { program } = require('commander');
 const { Marked } = require('marked');
 const katex = require('katex');
 const hljs = require('highlight.js');
-const { createRenderer } = require('../shared/html-renderer');
+const { createRenderer, inlineLocalImages } = require('../shared/html-renderer');
 const { withPage } = require('../shared/browser-pool');
+const { buildMathHeadExtras } = require('../shared/math-assets');
 const { buildHtmlPage } = require('../shared/html-page');
+const { stripFrontmatter } = require('../shared/frontmatter');
 const fs = require('fs');
 const path = require('path');
 
@@ -35,14 +37,20 @@ program.command('convert')
   .description('Convert Markdown table(s) to PDF')
   .requiredOption('-i, --input <file>', 'Input Markdown file')
   .requiredOption('-o, --output <file>', 'Output PDF file')
+  .option('--allow-remote', 'Allow remote images/fonts (JavaScript stays disabled)')
   .action(async (opts) => {
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
     if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
 
-    const md = fs.readFileSync(input, 'utf-8');
+    const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
     const bodyHtml = renderMarkdown(md);
-    const fullHtml = buildHtmlPage({ body: bodyHtml, css: pageCss, title: 'Markdown Table to PDF' });
+    const fullHtml = inlineLocalImages(buildHtmlPage({
+      body: bodyHtml,
+      css: pageCss,
+      title: 'Markdown Table to PDF',
+      headExtra: buildMathHeadExtras({ dark: false }),
+    }), path.dirname(input));
 
     try {
       await withPage(async (page) => {
@@ -54,7 +62,7 @@ program.command('convert')
           printBackground: true,
           displayHeaderFooter: false,
         });
-      });
+      }, { allowRemote: Boolean(opts.allowRemote) });
       console.log(`Done: ${output}`);
     } catch (e) {
       console.error('Error:', e.message);

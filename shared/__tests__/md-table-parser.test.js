@@ -95,4 +95,28 @@ describe('parseTables', () => {
     assert.strictEqual(tables[0].headers[0], 'a|b');
     assert.strictEqual(tables[0].rows[0][0], 'x|y');
   });
+
+  it('should parse tables without outer pipes', () => {
+    const tables = parseTables('a | b\n--- | ---\n1 | 2');
+    assert.strictEqual(tables.length, 1);
+    assert.deepStrictEqual(tables[0].headers, ['a', 'b']);
+    assert.deepStrictEqual(tables[0].rows, [['1', '2']]);
+  });
+
+  it('should not parse tables inside fenced code', () => {
+    const tables = parseTables('```md\n| a | b |\n| --- | --- |\n| 1 | 2 |\n```');
+    assert.strictEqual(tables.length, 0);
+  });
+
+  it('should not merge adjacent tables', () => {
+    const tables = parseTables('| a |\n| --- |\n| 1 |\n| b |\n| --- |\n| 2 |');
+    assert.strictEqual(tables.length, 2);
+    assert.deepStrictEqual(tables[0].headers, ['a']);
+    assert.deepStrictEqual(tables[1].headers, ['b']);
+  });
+
+  it('should pad short rows to the header width', () => {
+    const tables = parseTables('| a | b |\n| --- | --- |\n| 1 |');
+    assert.deepStrictEqual(tables[0].rows[0], ['1', '']);
+  });
 });
