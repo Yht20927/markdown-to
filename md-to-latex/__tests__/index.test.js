@@ -18,12 +18,14 @@ function runConvert(md) {
 
 describe('md-to-latex P0 fixes', () => {
   it('should escape plain text without breaking math', () => {
-    const out = runConvert('50% of C:\\Users\\name and snake_case_name and $x_i$ and \\$5');
+    const out = runConvert('50% of C:\\Users\\name and snake_case_name and $x_i$ and \\$5\n\n$$\n\\sum_{i=1}^n i\n$$');
     assert.ok(out.includes('50\\%'), out);
     assert.ok(out.includes('C:\\textbackslash{}Users\\textbackslash{}name'), out);
     assert.ok(out.includes('snake\\_case\\_name'), out);
     assert.ok(out.includes('$x_i$'), out);
     assert.ok(out.includes('\\$5'), out);
+    assert.ok(out.includes('\\[\n\\sum_{i=1}^n i\n\\]'), out);
+    assert.ok(!out.includes('\\textbackslash{}sum'), out);
   });
 
   it('should keep inline code literal', () => {
@@ -46,15 +48,19 @@ describe('md-to-latex P0 fixes', () => {
   });
 
   it('should map heading levels', () => {
-    const out = runConvert('# A\n## B\n### C');
+    const out = runConvert('# A\n## B\n### C\n\n> ## Quote\n>\n> - bullet');
     assert.ok(out.includes('\\section{A}'), out);
     assert.ok(out.includes('\\subsection{B}'), out);
     assert.ok(out.includes('\\subsubsection{C}'), out);
+    assert.ok(out.includes('\\begin{quote}'), out);
+    assert.ok(out.includes('\\textbf{Quote}'), out);
+    assert.ok(out.includes('\\begin{itemize}'), out);
   });
 
   it('should join multiline list items', () => {
-    const out = runConvert('- one\n  continuation\n  - nested\n1. first\n   more\n2. second');
+    const out = runConvert('- one\n  continuation\n   - nested\n1. first\n   more\n2. second');
     assert.ok(out.includes('\\item one continuation'), out);
+    assert.ok(out.includes('\\begin{itemize}'), out);
     assert.ok(out.includes('\\item nested'), out);
     assert.ok(out.includes('\\item first more'), out);
   });

@@ -163,7 +163,7 @@ function joinListContinuations(md) {
   let result = md;
   for (let i = 0; i < 4; i++) {
     const next = result.replace(
-      /^(\s*(?:[-*+]|\d+[.)])\s+[^\n]*)\n([ \t]{2,})(?![-*+]|\d+[.)]|`{3,}|~{3,})([^\n]+)$/gm,
+      /^(\s*(?:[-*+]|\d+[.)])\s+[^\n]*)\n([ \t]{2,})(?![ \t]*(?:[-*+]|\d+[.)]|`{3,}|~{3,}))([^\n]+)$/gm,
       '$1 $3'
     );
     if (next === result) break;
@@ -172,15 +172,16 @@ function joinListContinuations(md) {
   return result;
 }
 
-function processBlocks(md, context) {
+function processBlocks(md, context, { inQuote = false } = {}) {
   const lines = md.split('\n');
   const out = [];
   let quote = [];
 
   const flushQuote = () => {
     if (quote.length === 0) return;
+    const inner = nestLists(processBlocks(quote.join('\n'), context, { inQuote: true }));
     out.push('\\begin{quote}');
-    out.push(...quote);
+    out.push(...inner.split('\n'));
     out.push('\\end{quote}');
     quote = [];
   };
@@ -188,16 +189,21 @@ function processBlocks(md, context) {
   for (const line of lines) {
     const quoteMatch = line.match(/^>\s?(.*)$/);
     if (quoteMatch) {
-      quote.push(renderInline(quoteMatch[1], context));
+      quote.push(quoteMatch[1]);
       continue;
     }
     flushQuote();
 
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
-      const level = heading[1].length;
-      const commands = ['section', 'subsection', 'subsubsection', 'paragraph', 'subparagraph', 'subparagraph'];
-      out.push('\\' + commands[level - 1] + '{' + renderInline(heading[2], context) + '}');
+      const content = renderInline(heading[2], context);
+      if (inQuote) {
+        out.push('\\textbf{' + content + '}');
+      } else {
+        const level = heading[1].length;
+        const commands = ['section', 'subsection', 'subsubsection', 'paragraph', 'subparagraph', 'subparagraph'];
+        out.push('\\' + commands[level - 1] + '{' + content + '}');
+      }
       continue;
     }
 
@@ -264,6 +270,7 @@ function nestLists(text) {
 
 function mdToLatex(md) {
   const codeBlocks = [];
+  const mathBlocks = [];
   const tables = [];
   const footnotes = new Map();
   const links = new Map();
@@ -276,6 +283,15 @@ function mdToLatex(md) {
       const cleaned = code.split('\n').map((line) => line.replace(/^[ \t]*>[ \t]?/, '')).join('\n');
       codeBlocks.push({ lang, code: cleaned });
       return make('CODEBLOCK', codeBlocks.length - 1);
+    }
+  );
+
+  result = result.replace(
+    /^[ \t]*(?:>[ \t]?)*\$\$[ \t]*\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\$\$[ \t]*$/gm,
+    (_m, tex) => {
+      const cleaned = tex.split('\n').map((line) => line.replace(/^[ \t]*>[ \t]?/, '')).join('\n');
+      mathBlocks.push(cleaned);
+      return make('MATHBLOCK', mathBlocks.length - 1);
     }
   );
 
@@ -321,6 +337,9 @@ function mdToLatex(md) {
     const cb = codeBlocks[i];
     const langOpt = cb.lang ? `[language={${cb.lang.replace(/[^\w+-]/g, '')}}]` : '';
     result = result.split(make('CODEBLOCK', i)).join(`\\begin{lstlisting}${langOpt}\n${cb.code}\n\\end{lstlisting}`);
+  }
+  for (let i = 0; i < mathBlocks.length; i++) {
+    result = result.split(make('MATHBLOCK', i)).join(`\\[\n${mathBlocks[i]}\n\\]`);
   }
 
   assertAllRestored(result);
