@@ -25,7 +25,7 @@ triggers:
 | Tool | Output | Key Library | Speed |
 |------|--------|-------------|-------|
 | **md-to-pdf** | PDF (29 themes) | marked + puppeteer + katex | ~3s |
-| **md-to-word** | Word .doc | marked + katex + hljs | <0.5s |
+| **md-to-word** | Word .doc / .docx | marked + docx | <0.5s |
 | **md-to-html** | HTML5 | marked + katex + hljs | <0.5s |
 | **md-to-image** | PNG / JPG | marked + puppeteer + katex | ~2s |
 | **md-to-text** | Plain Text | regex (md-to.com同逻辑) | <0.1s |
@@ -70,6 +70,10 @@ node md-to-pdf/index.js convert -i in.md -o out.pdf --no-page-numbers
 # csv-to-md extras:
 node csv-to-md/index.js convert -i in.csv -o out.md -d ','   # Specify delimiter
 
+# md-to-word output:
+node md-to-word/index.js convert -i in.md -o out.docx   # native OOXML
+node md-to-word/index.js convert -i in.md -o out.doc    # HTML-as-doc
+
 # word-to-md extras:
 node word-to-md/index.js convert -i in.docx -o out.md --assets ./images
 
@@ -83,7 +87,7 @@ node md-to-pdf/index.js convert -i in.md -o out.pdf --allow-remote
 md-to-format/
 ├── SKILL.md              ← This file (master index)
 ├── md-to-pdf/            ← Markdown → PDF (29 themes)
-├── md-to-word/           ← Markdown → Word .doc
+├── md-to-word/           ← Markdown → Word .doc / .docx
 ├── md-to-html/           ← Markdown → HTML5
 ├── md-to-image/          ← Markdown → PNG/JPG
 ├── md-to-text/           ← Markdown → Plain Text

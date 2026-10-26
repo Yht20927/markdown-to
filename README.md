@@ -2,7 +2,7 @@
 
 > [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 125 个回归测试 · 美化增强
+> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 127 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -11,15 +11,15 @@
 | 工具 | 输出 | 特性 | 速度 |
 |------|------|------|------|
 | **md-to-pdf** | PDF (29 主题) | KaTeX 数学 + hljs 高亮 + 页码（可关闭） | ~3s |
-| **md-to-word** | Word .doc | mso 样式, 表格/标题原生识别, 公式保留 TeX 源码 | <0.5s |
-
-> `md-to-word` 输出 HTML-as-`.doc`，不是 OOXML `.docx`；如需 `.docx`，可用 LibreOffice 转换。
+| **md-to-word** | Word .doc / .docx | `.doc` mso 样式；`.docx` 原生 OOXML（图片/表格/列表/公式） | <0.5s |
 | **md-to-html** | HTML5 | GitHub 风格 CSS, `--theme dark` 暗色模式 | <0.5s |
 | **md-to-image** | PNG / JPG | `--scale` 高 DPI, `--watermark` 水印, `--padding` | ~2s |
 | **md-to-text** | 纯文本 | 代码块保护, 图片/链接顺序修正 | <0.1s |
 | **md-to-latex** | LaTeX .tex | CJK 自动检测 → ctexart, 特殊字符转义 | <0.3s |
 | **md-to-rst** | reStructuredText | 动态标题下划线, 脚注 `#` 配对 | <0.3s |
 | **md-to-confluence** | Confluence wiki | `***粗斜体***` 支持 | <0.2s |
+
+> `md-to-word` 的 `.doc` 是 HTML-as-doc（兼容 Word），`.docx` 是原生 OOXML；公式保留 TeX 源码。
 
 ### 其他格式 → Markdown
 
@@ -122,6 +122,16 @@ node md-to-image/index.js convert -i in.md -o out.png \
   --scale 2 --padding 40 --bg "#fafafa" --watermark "© 2026"
 ```
 
+### md-to-word
+
+```bash
+# 原生 OOXML .docx
+node md-to-word/index.js convert -i in.md -o out.docx
+
+# HTML-as-doc（旧格式，兼容 Word）
+node md-to-word/index.js convert -i in.md -o out.doc
+```
+
 ### csv-to-md
 
 ```bash
@@ -147,7 +157,7 @@ node pdf-to-md/index.js convert -i in.pdf -o out.md --allow-empty
 
 | 范式 | 工具 | 引擎 |
 |------|------|------|
-| **marked → HTML** | md-to-pdf / html / word / image | marked + katex + hljs |
+| **marked → HTML** | md-to-pdf / html / word / image | marked + katex + hljs（word 另含 docx OOXML） |
 | **纯 regex 顺序替换** | md-to-latex / rst / confluence / text | 占位符保护 + 正则管线 |
 | **反向转换** | html-to-md / word-to-md / pdf-to-md | turndown / mammoth / pdf-parse |
 | **表格专用** | csv-to-md / md-table-to-csv / json-to-md | shared/csv.js + shared/gfm-table.js |
@@ -195,7 +205,7 @@ markdownFomart/
 │       ├── converter.js      ← Puppeteer 适配
 │       └── cli.js            ← list / info / convert
 ├── md-to-html/               ← Markdown → HTML (暗色模式)
-├── md-to-word/               ← Markdown → Word .doc (mso 样式)
+├── md-to-word/               ← Markdown → Word .doc / .docx (mso / OOXML)
 ├── md-to-image/              ← Markdown → PNG/JPG (高DPI/水印)
 ├── md-to-latex/              ← Markdown → LaTeX (CJK 检测)
 ├── md-to-rst/                ← Markdown → reStructuredText
@@ -214,13 +224,13 @@ markdownFomart/
 ## 测试
 
 ```bash
-# 运行所有测试（125 个）
+# 运行所有测试（127 个）
 npm test
 
 # 仅共享模块测试（87 个）
 npm run test:shared
 
-# 仅工具集成测试（38 个）
+# 仅工具集成测试（40 个）
 npm run test:tools
 
 # 语法检查
@@ -245,7 +255,7 @@ npm run lint
 - **PDF**: 代码块圆角+阴影+语言标签、表格斑马纹+sticky 表头、引用块彩色边框、admonition 块、封面页/TOC/页码 CSS
 - **HTML**: GitHub 风格 CSS、`--theme dark` 暗色模式、`prefers-color-scheme` 自动切换
 - **Image**: `--scale` 高 DPI、`--watermark` 水印、`--padding`/`--bg` 自定义
-- **Word**: mso 命名空间样式、`@page Section1` 页面设置
+- **Word**: `.doc` mso 命名空间样式；`.docx` 原生 OOXML，支持标题/表格/列表/图片/链接/TeX 公式
 
 ## 与原版对比
 
@@ -257,7 +267,7 @@ npm run lint
 | 批量处理 | 单个文件 | 支持脚本批量 |
 | 集成 | 手动操作 | 可嵌入 CI/脚本 |
 | 主题 | — | 29 个 PDF 主题 + 暗色模式 |
-| 数据正确性 | — | 21 项 P0 bug 修复 + 84 回归测试 |
+| 数据正确性 | — | 21 项 P0 bug 修复 + 127 回归测试 |
 | 收费 | 免费 | 开源 MIT |
 
 ## License

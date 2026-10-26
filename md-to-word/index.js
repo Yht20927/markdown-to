@@ -10,6 +10,7 @@ const { hljsCss } = require('../shared/math-assets');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { markdownToDocx } = require('./docx');
 
 const { renderMarkdown } = createRenderer({ Marked, katex, hljs, mathMode: 'tex' });
 
@@ -90,22 +91,31 @@ const msoCss = `
 
 program
   .name('md-to-word')
-  .description('Convert Markdown to Word (.doc). Outputs mso-compatible HTML-as-.doc.')
+  .description('Convert Markdown to Word (.doc or .docx).')
   .version(pkg.version);
 
 program.command('convert')
-  .description('Convert a Markdown file to Word .doc')
+  .description('Convert a Markdown file to Word .doc or .docx')
   .requiredOption('-i, --input <file>', 'Input Markdown file')
-  .requiredOption('-o, --output <file>', 'Output .doc file')
+  .requiredOption('-o, --output <file>', 'Output .doc or .docx file')
   .action(async (opts) => {
     const input = path.resolve(opts.input);
     const output = path.resolve(opts.output);
     if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
-    if (!/\.doc$/i.test(output)) {
-      console.error('Output must be a .doc file (md-to-word emits HTML-based .doc, not .docx)');
+    if (!/\.(doc|docx)$/i.test(output)) {
+      console.error('Output must be a .doc or .docx file');
       process.exit(1);
     }
     const md = stripFrontmatter(fs.readFileSync(input, 'utf-8'));
+    if (/\.docx$/i.test(output)) {
+      const buffer = await markdownToDocx(md, {
+        baseDir: path.dirname(input),
+        title: path.basename(input, path.extname(input)),
+      });
+      fs.writeFileSync(output, buffer);
+      console.log(`Done: ${output} (${buffer.length} bytes)`);
+      return;
+    }
     const bodyHtml = renderMarkdown(md);
     const codeCss = `<style>${hljsCss(false)}</style>`;
 
