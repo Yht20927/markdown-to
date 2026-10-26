@@ -11,7 +11,7 @@ triggers:
 
 # pdf-to-md Skill
 
-Convert PDF to Markdown with font-size and text-position heuristics. Recovers headings, paragraphs, lists, GFM tables, fenced code blocks, and removes page numbers; falls back to plain text extraction when layout data is unavailable.
+Convert PDF to Markdown with font-size and text-position heuristics. Recovers headings, paragraphs, lists, blockquotes, GFM tables, fenced code blocks, and removes page numbers; falls back to plain text extraction when layout data is unavailable.
 
 ## Usage
 

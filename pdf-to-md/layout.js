@@ -201,6 +201,7 @@ function pageToBlocks(lines, bodySize) {
   let paragraph = [];
   let list = [];
   let listKind = '';
+  let quote = [];
   let previousParagraphLine = null;
 
   const flushParagraph = () => {
@@ -213,7 +214,11 @@ function pageToBlocks(lines, bodySize) {
     list = [];
     listKind = '';
   };
-  const flush = () => { flushParagraph(); flushList(); };
+  const flushQuote = () => {
+    if (quote.length) blocks.push(quote.map((line) => `> ${line.text}`).join('\n'));
+    quote = [];
+  };
+  const flush = () => { flushParagraph(); flushList(); flushQuote(); };
 
   for (let i = 0; i < filtered.length; i++) {
     const line = filtered[i];
@@ -252,10 +257,21 @@ function pageToBlocks(lines, bodySize) {
     }
 
     const previousLine = filtered[i - 1];
-    const indented = line.left > leftMargin + bodySize * 0.8
+    const indent = line.left - leftMargin;
+    const indented = indent > bodySize * 0.8
       && (!previousLine || previousLine.y - line.y > bodySize * 1.6);
+    const quoted = indented && !bullet && !ordered
+      && indent >= bodySize * 1.5 && indent < bodySize * 1.8;
+    if (quoted) {
+      flushParagraph();
+      flushList();
+      quote.push(line);
+      previousParagraphLine = null;
+      continue;
+    }
     if (bullet || ordered || indented) {
       flushParagraph();
+      flushQuote();
       const kind = ordered ? 'ordered' : 'bullet';
       if (listKind && listKind !== kind) flushList();
       listKind = kind;
@@ -270,6 +286,7 @@ function pageToBlocks(lines, bodySize) {
       flushParagraph();
     }
     flushList();
+    flushQuote();
     paragraph.push(line.text);
     previousParagraphLine = line;
   }

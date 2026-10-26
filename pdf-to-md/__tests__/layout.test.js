@@ -33,6 +33,8 @@ describe('pdf-to-md layout', () => {
       item('2', 307, 570),
       item('js', 538, 540, 5.5, 'mono'),
       item('const x = 1;', 52, 532, 7.5, 'mono'),
+      item('Quote line', 57, 500),
+      item('continues here', 57, 482),
     ];
     const markdown = layoutToMarkdown([page(items)]);
     assert.match(markdown, /^# Report Title/m);
@@ -42,6 +44,7 @@ describe('pdf-to-md layout', () => {
     assert.ok(markdown.includes('| A | B |'), markdown);
     assert.ok(markdown.includes('| 1 | 2 |'), markdown);
     assert.ok(markdown.includes('```js\nconst x = 1;\n```'), markdown);
+    assert.ok(markdown.includes('> Quote line\n> continues here'), markdown);
     assert.ok(!markdown.includes('1 / 1'), markdown);
   });
 
