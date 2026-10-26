@@ -37,7 +37,7 @@ triggers:
 
 | Tool | Input | Key Library | Speed |
 |------|-------|-------------|-------|
-| **html-to-md** | HTML → MD | turndown | <0.3s |
+| **html-to-md** | HTML → MD | turndown + GFM extensions | <0.3s |
 | **word-to-md** | .docx → MD | mammoth + turndown | <1s |
 | **pdf-to-md** | PDF → MD | pdf-parse + layout heuristics | <1s |
 

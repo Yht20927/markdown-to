@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { program } = require('commander');
 const { createTurndown } = require('../shared/turndown-factory');
+const { resolveInOut, readInput, writeOutput, handleError } = require('../shared/cli');
 const fs = require('fs');
 const path = require('path');
 
@@ -19,13 +20,12 @@ program.command('convert')
   .requiredOption('-i, --input <file>', 'Input HTML file')
   .requiredOption('-o, --output <file>', 'Output Markdown file')
   .action(async (opts) => {
-    const input = path.resolve(opts.input);
-    const output = path.resolve(opts.output);
-    if (!fs.existsSync(input)) { console.error('Input file not found'); process.exit(1); }
-    const html = fs.readFileSync(input, 'utf-8');
-    const md = turndown.turndown(html);
-    fs.writeFileSync(output, md.endsWith('\n') ? md : md + '\n', 'utf-8');
-    console.log(`Done: ${output} (${md.length} chars)`);
+    try {
+      const { input, output } = resolveInOut(opts);
+      const html = readInput(input).replace(/^\uFEFF/, '');
+      const md = turndown.turndown(html).trim();
+      writeOutput(output, md ? md + '\n' : '\n');
+    } catch (e) { handleError(e); }
   });
 
 program.parse();

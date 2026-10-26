@@ -1,6 +1,6 @@
 ---
 name: html-to-md
-description: Convert HTML to Markdown using turndown (same library as md-to.com)
+description: Convert HTML to Markdown using turndown with GFM tables, KaTeX recovery, task lists, and table alignment
 triggers:
   - Convert HTML to Markdown
   - Extract markdown from web pages
@@ -11,7 +11,7 @@ triggers:
 
 # html-to-md Skill
 
-Convert HTML to Markdown using turndown — exact same library as md-to.com.
+Convert HTML to Markdown using turndown. Recovers KaTeX source from rendered formulas, preserves task checkboxes and table column alignment, and supports GFM tables with escaped pipes and `<br>` cells.
 
 ## Usage
 

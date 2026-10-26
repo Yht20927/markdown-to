@@ -1,7 +1,7 @@
 {
   "name": "html-to-md",
   "version": "1.0.0",
-  "description": "Convert HTML to Markdown using turndown — exact same library as md-to.com.",
+  "description": "Convert HTML to Markdown with GFM tables, KaTeX recovery, task lists, and table alignment using turndown.",
   "main": "index.js",
   "dependencies": {
     "turndown": "^7.2.0",

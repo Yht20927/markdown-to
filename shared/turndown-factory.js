@@ -36,6 +36,64 @@ function createTurndown({ gfmTables = true, headingStyle = 'atx', codeBlockStyle
       .trim();
   };
 
+  const rowCells = (row) => {
+    const cells = row.cells ? Array.from(row.cells) : Array.from(row.querySelectorAll('th, td'));
+    return cells.filter((cell) => cell.parentNode === row);
+  };
+
+  const cellAlignment = (cell) => {
+    let align = (cell.getAttribute('align') || '').toLowerCase();
+    if (!align) {
+      const style = cell.getAttribute('style') || '';
+      const match = style.match(/text-align\s*:\s*(left|center|right)/i);
+      align = match ? match[1].toLowerCase() : '';
+    }
+    if (align === 'center') return ':---:';
+    if (align === 'right') return '---:';
+    if (align === 'left') return ':---';
+    return '---';
+  };
+
+  td.addRule('katex', {
+    filter: (node) => {
+      if (node.nodeName !== 'SPAN') return false;
+      const className = node.getAttribute('class') || '';
+      return className.split(/\s+/).includes('katex');
+    },
+    replacement: (_content, node) => {
+      const annotation = node.querySelector('annotation[encoding="application/x-tex"]');
+      const tex = annotation ? annotation.textContent.trim() : '';
+      if (!tex) return '';
+      let parent = node.parentNode;
+      let display = false;
+      while (parent) {
+        const className = parent.getAttribute ? parent.getAttribute('class') || '' : '';
+        if (className.split(/\s+/).includes('katex-display')) {
+          display = true;
+          break;
+        }
+        parent = parent.parentNode;
+      }
+      return display ? `\n\n$$\n${tex}\n$$\n\n` : `$${tex}$`;
+    }
+  });
+
+  td.addRule('strikethrough', {
+    filter: ['del', 's', 'strike'],
+    replacement: (content) => `~~${content}~~`
+  });
+
+  td.addRule('taskCheckbox', {
+    filter: (node) => node.nodeName === 'INPUT'
+      && (node.getAttribute('type') || '').toLowerCase() === 'checkbox',
+    replacement: (_content, node) => {
+      const checked = node.checked || node.hasAttribute('checked');
+      const next = node.nextSibling ? node.nextSibling.textContent || '' : '';
+      const suffix = /^\s/.test(next) ? '' : ' ';
+      return `${checked ? '[x]' : '[ ]'}${suffix}`;
+    }
+  });
+
   if (gfmTables) {
     td.addRule('table', {
       filter: 'table',
@@ -45,19 +103,19 @@ function createTurndown({ gfmTables = true, headingStyle = 'atx', codeBlockStyle
         if (allRows.length === 0) return '';
 
         const thead = node.querySelector('thead');
-        const headerRow = thead ? thead.querySelector('tr') : null;
+        const headerRow = thead ? (thead.rows ? thead.rows[0] : thead.querySelector('tr')) : null;
         const headerIndex = headerRow ? allRows.indexOf(headerRow) : -1;
         const firstRow = headerRow || allRows[0];
-        const headerCells = Array.from(firstRow.querySelectorAll('th, td'));
+        const headerCells = rowCells(firstRow);
         if (headerCells.length === 0) return '';
 
         const headers = headerCells.map(cellToMarkdown);
         rows.push('| ' + headers.join(' | ') + ' |');
-        rows.push('| ' + headers.map(() => '---').join(' | ') + ' |');
+        rows.push('| ' + headerCells.map(cellAlignment).join(' | ') + ' |');
 
         for (let i = 0; i < allRows.length; i++) {
           if (i === (headerIndex >= 0 ? headerIndex : 0)) continue;
-          const cells = Array.from(allRows[i].querySelectorAll('th, td')).map(cellToMarkdown);
+          const cells = rowCells(allRows[i]).map(cellToMarkdown);
           while (cells.length < headers.length) cells.push('');
           if (cells.length > 0) rows.push('| ' + cells.join(' | ') + ' |');
         }

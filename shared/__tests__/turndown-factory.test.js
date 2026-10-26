@@ -35,3 +35,24 @@ describe('turndown-factory P0 fixes', () => {
     assert.ok(md.includes('| v |'), md);
   });
 });
+
+describe('turndown-factory HTML round-trip extensions', () => {
+  it('restores KaTeX source instead of duplicating rendered text', () => {
+    const md = convert('<p>Value <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true">xi</span></span>.</p><span class="katex-display"><span class="katex"><annotation encoding="application/x-tex">\\frac{1}{2}</annotation><span class="katex-html">12</span></span></span>');
+    assert.ok(md.includes('Value $x_i$.'), md);
+    assert.ok(md.includes('$$\n\\frac{1}{2}\n$$'), md);
+    assert.ok(!md.includes('katex'), md);
+  });
+
+  it('preserves task list checkboxes and strikethrough', () => {
+    const md = convert('<p><del>gone</del></p><ul><li><input checked disabled type="checkbox"> done</li><li><input disabled type="checkbox"> todo</li></ul>');
+    assert.ok(md.includes('~~gone~~'), md);
+    assert.ok(md.includes('[x] done'), md);
+    assert.ok(md.includes('[ ] todo'), md);
+  });
+
+  it('preserves table column alignment', () => {
+    const md = convert('<table><thead><tr><th align="left">L</th><th style="text-align:center">C</th><th align="right">R</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody></table>');
+    assert.ok(md.includes('| :--- | :---: | ---: |'), md);
+  });
+});
