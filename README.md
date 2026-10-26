@@ -2,7 +2,7 @@
 
 > [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：11 个 shared 模块 · 多项 P0 修复 · 145 个回归测试 · 美化增强
+> **v2.0** — 架构重构：12 个 shared 模块 · 多项 P0 修复 · 145 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -174,6 +174,7 @@ node pdf-to-md/index.js convert -i in.pdf -o out.md --allow-empty
 | `md-table-parser.js` | MD 表格解析 (parseTables) | md-table-to-csv |
 | `csv.js` | RFC 4180 CSV 解析器+写入器 | csv-to-md, md-table-to-csv |
 | `turndown-factory.js` | 反向转换共享工厂 | html-to-md, word-to-md |
+| `word-quote-lists.js` | Word 引用列表样式/路径生成 | md-to-word, word-to-md |
 | `frontmatter.js` | YAML frontmatter 剥离 | 全部 Markdown 读取工具 |
 | `math-assets.js` | KaTeX 字体内联 + hljs 主题 | md-to-pdf/image, md-table-to-image/pdf |
 | `browser-pool.js` | Puppeteer 单例池 | md-to-image/pdf, md-table-to-image/pdf |
@@ -187,7 +188,7 @@ markdownFomart/
 ├── README.md
 ├── REFACTOR_PLAN.md          ← 重构方案（v2.0 蓝图）
 ├── package.json              ← npm workspace 根配置
-├── shared/                   ← 共享模块（11 个）
+├── shared/                   ← 共享模块（12 个）
 │   ├── __tests__/            ← 共享模块测试（93 个）
 │   ├── html-renderer.js
 │   ├── placeholders.js
@@ -195,6 +196,7 @@ markdownFomart/
 │   ├── md-table-parser.js
 │   ├── csv.js
 │   ├── turndown-factory.js
+│   ├── word-quote-lists.js
 │   ├── frontmatter.js
 │   ├── math-assets.js
 │   ├── browser-pool.js
@@ -252,7 +254,7 @@ npm run lint
 - `npm audit --omit=dev` 当前为 0 vulnerabilities
 
 ### 架构统一
-- 抽取 11 个 shared 模块消除重复代码
+- 抽取 12 个 shared 模块消除重复代码
 - 全部 16 工具使用统一 CLI (`shared/cli.js`)
 - npm workspace 统一依赖版本
 - 浏览器工具默认禁用 JavaScript 与远程请求，显式 `--allow-remote` 才放行

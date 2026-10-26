@@ -2,6 +2,7 @@
 const { program } = require('commander');
 const mammoth = require('mammoth');
 const { createTurndown } = require('../shared/turndown-factory');
+const { quoteListChains, quoteListStyleName, quoteListPath } = require('../shared/word-quote-lists');
 const fs = require('fs');
 const path = require('path');
 
@@ -22,13 +23,7 @@ const styleMap = [
   "p[style-name='HTML Preformatted'] => pre:fresh",
   "r[style-name='Inline Math'] => span.math-inline",
   "p[style-name='Quote'] => blockquote > p:fresh",
-  ...['Bullet', 'Number'].flatMap((kind) => {
-    const tag = kind === 'Bullet' ? 'ul' : 'ol';
-    return Array.from({ length: 5 }, (_, index) => {
-      const prefix = `${tag} > li > `.repeat(index);
-      return `p[style-name='Quote ${kind} ${index + 1}'] => blockquote > ${prefix}${tag} > li:fresh`;
-    });
-  }),
+  ...quoteListChains.map((chain) => `p[style-name='${quoteListStyleName(chain)}'] => blockquote > ${quoteListPath(chain)}:fresh`),
   "p[style-name='Quote Code'] => blockquote > pre:fresh",
   ...Array.from({ length: 6 }, (_, index) => `p[style-name='Quote Heading ${index + 1}'] => blockquote > h${index + 1}:fresh`),
   "p[style-name='Math Block'] => div.math-display:fresh",

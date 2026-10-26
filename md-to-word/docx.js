@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { fileURLToPath } = require('url');
+const { quoteListChains, quoteListStyleName, quoteListStyleId } = require('../shared/word-quote-lists');
 const { Marked } = require('marked');
 const {
   Document,
@@ -63,12 +64,12 @@ const numbering = {
   ],
 };
 
-const quoteListStyles = ['Bullet', 'Number'].flatMap((kind) => Array.from({ length: 5 }, (_, index) => ({
-  id: `Quote${kind}${index + 1}`,
-  name: `Quote ${kind} ${index + 1}`,
+const quoteListStyles = quoteListChains.map((chain) => ({
+  id: quoteListStyleId(chain),
+  name: quoteListStyleName(chain),
   basedOn: 'Normal',
-  paragraph: { indent: { left: 720 + index * 720 } },
-})));
+  paragraph: { indent: { left: 720 * chain.length } },
+}));
 
 const quoteHeadingStyles = Array.from({ length: 6 }, (_, index) => ({
   id: `QuoteHeading${index + 1}`,
@@ -267,10 +268,11 @@ function inlineRuns(tokens, baseDir, state = {}) {
 
 let numberingInstance = 0;
 
-function listParagraphs(token, baseDir, level, extra = {}, quoted = false) {
+function listParagraphs(token, baseDir, level, extra = {}, quoted = false, chain = []) {
   const paragraphs = [];
   const isQuote = quoted || extra.style === 'Quote';
   const listExtra = isQuote ? { ...extra, style: undefined } : extra;
+  const currentChain = [...chain, token.ordered ? 'ol' : 'ul'];
   const reference = token.ordered ? 'md-numbers' : 'md-bullets';
   const instance = ++numberingInstance;
   for (const item of token.items || []) {
@@ -283,16 +285,14 @@ function listParagraphs(token, baseDir, level, extra = {}, quoted = false) {
       else if (child.type !== 'space') inline.push(child);
     }
     if (item.task) inline.unshift({ type: 'text', text: item.checked ? '☑ ' : '☐ ' });
-    const style = isQuote
-      ? `Quote${token.ordered ? 'Number' : 'Bullet'}${Math.min(level, 4) + 1}`
-      : listExtra.style;
+    const style = isQuote ? quoteListStyleId(currentChain) : listExtra.style;
     paragraphs.push(new Paragraph({
       ...listExtra,
       style,
       numbering: { reference, level: Math.min(level, 4), instance },
       children: inlineRuns(inline, baseDir),
     }));
-    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, listExtra, isQuote));
+    for (const child of nested) paragraphs.push(...listParagraphs(child, baseDir, level + 1, listExtra, isQuote, currentChain));
   }
   return paragraphs;
 }
