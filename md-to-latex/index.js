@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { stripFrontmatter } = require('../shared/frontmatter');
 const { make, assertAllRestored } = require('../shared/placeholders');
+const { decodeEntities } = require('../shared/entities');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
 
@@ -52,6 +53,25 @@ function isTableSeparator(line) {
   return /^\|?[\s:|-]+\|[\s:|-]*$/.test(line.trim()) && line.includes('-');
 }
 
+function splitQuote(line) {
+  const match = line.match(/^(?:[ \t]*>[ \t]?)+/);
+  return { prefix: match ? match[0] : '', text: match ? line.slice(match[0].length) : line };
+}
+
+function quoteDepth(prefix) {
+  return (prefix.match(/>/g) || []).length;
+}
+
+function stripQuoteMarkers(line, depth) {
+  let text = line;
+  for (let i = 0; i < depth; i++) {
+    const next = text.replace(/^[ \t]*>[ \t]?/, '');
+    if (next === text) break;
+    text = next;
+  }
+  return text;
+}
+
 function parseTable(tableText) {
   const lines = tableText.trim().split('\n').map((line) => line.trim());
   if (lines.length < 2) return null;
@@ -85,8 +105,11 @@ function renderInline(text, context) {
   result = result.replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_m, tex) => protect('$$' + tex + '$$'));
   result = result.replace(/(?<!\\)\$(?![\s$])([^\n$]*?)(?<![\s\\])\$(?!\$)/g, (_m, tex) => protect('$' + tex + '$'));
 
+  // Escaped Markdown characters are literal, not formatting syntax.
+  result = result.replace(/\\([\\`*_{}\[\]()#+\-.!>~|$])/g, (_m, char) => protect(escapeLatex(char)));
+
   // Images before links.
-  result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, url) => {
+  result = result.replace(/!\[([^\]]*)\]\(\s*((?:[^()\s\\]|\\.|\([^()]*\))+)(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\)/g, (_m, alt, url) => {
     return protect(`\\includegraphics[width=\\linewidth]{${escapeLatexUrl(url)}}`);
   });
 
@@ -105,17 +128,17 @@ function renderInline(text, context) {
     if (!url) return renderInline(labelText, context);
     return protect(`\\href{${escapeLatexUrl(url)}}{${renderInline(labelText, context)}}`);
   });
-  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, labelText, url) => {
+  result = result.replace(/\[([^\]]+)\]\(\s*((?:[^()\s\\]|\\.|\([^()]*\))+)(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\)/g, (_m, labelText, url) => {
     return protect(`\\href{${escapeLatexUrl(url)}}{${renderInline(labelText, context)}}`);
   });
 
-  result = result.replace(/\*\*\*([^*\n]+)\*\*\*/g, (_m, inner) => {
+  result = result.replace(/\*\*\*((?:[^*\n]|\*(?!\*))+)\*\*\*/g, (_m, inner) => {
     return protect('\\textbf{\\textit{' + renderInline(inner, context) + '}}');
   });
-  result = result.replace(/\*\*([^*\n]+)\*\*/g, (_m, inner) => {
+  result = result.replace(/\*\*((?:[^*\n]|\*(?!\*))+)\*\*/g, (_m, inner) => {
     return protect('\\textbf{' + renderInline(inner, context) + '}');
   });
-  result = result.replace(/(?<!\w)__([^_\n]+)__(?!\w)/g, (_m, inner) => {
+  result = result.replace(/(?<!\w)__((?:[^_\n]|_(?!_))+?)__(?!\w)/g, (_m, inner) => {
     return protect('\\textbf{' + renderInline(inner, context) + '}');
   });
   result = result.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, (_m, inner) => {
@@ -131,9 +154,12 @@ function renderInline(text, context) {
   result = result.replace(/<((?:https?:\/\/|mailto:)[^>]+)>/gi, (_m, url) => {
     return protect('\\url{' + escapeLatexUrl(url.replace(/^mailto:/i, '')) + '}');
   });
+  result = result.replace(/<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>/g, (_m, email) => {
+    return protect('\\url{' + escapeLatexUrl(email) + '}');
+  });
   result = result.replace(/<\/?[^>]+>/g, '');
 
-  result = escapeLatex(unescapeMarkdown(result));
+  result = escapeLatex(unescapeMarkdown(decodeEntities(result)));
   for (let i = 0; i < tokens.length; i++) {
     result = result.split(make('CB', i)).join(tokens[i]);
   }
@@ -173,6 +199,8 @@ function joinListContinuations(md) {
 }
 
 function processBlocks(md, context, { inQuote = false } = {}) {
+  md = md.replace(/^(?!\s*(?:[-*+]\s|\d+[.)]\s|>|#|\||\x00))([^\n]*\S[^\n]*)\n=+[ \t]*$/gm, '# $1');
+  md = md.replace(/^(?!\s*(?:[-*+]\s|\d+[.)]\s|>|#|\||\x00))([^\n]*\S[^\n]*)\n-+[ \t]*$/gm, '## $1');
   const lines = md.split('\n');
   const out = [];
   let quote = [];
@@ -196,7 +224,7 @@ function processBlocks(md, context, { inQuote = false } = {}) {
 
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
-      const content = renderInline(heading[2], context);
+      const content = renderInline(heading[2].replace(/[ \t]+#+[ \t]*$/, ''), context);
       if (inQuote) {
         out.push('\\textbf{' + content + '}');
       } else {
@@ -238,10 +266,33 @@ function nestLists(text) {
   const lines = text.split('\n');
   const out = [];
   const stack = [];
+  const leadingWidth = (line) => line.replace(/\t/g, '  ').match(/^ */)[0].length;
+  const nextNonEmpty = (index) => {
+    for (let i = index + 1; i < lines.length; i++) {
+      if (lines[i].trim() === '') continue;
+      return lines[i];
+    }
+    return null;
+  };
 
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
     const item = line.match(/^(\s*)\\([ou]item)\s/);
     if (!item) {
+      const top = stack[stack.length - 1];
+      // Blank lines and indented paragraphs can occur inside a list item;
+      // they must not split the surrounding list environment.
+      const next = nextNonEmpty(index);
+      if (line.trim() === '') {
+        const nextIsItem = next && /^\s*\\[ou]item\s/.test(next);
+        if (next && (nextIsItem || (top ? leadingWidth(next) > top.indent : false))) {
+          out.push(line);
+          continue;
+        }
+      } else if (top && leadingWidth(line) > top.indent) {
+        out.push(line);
+        continue;
+      }
       while (stack.length > 0) out.push('\\end{' + stack.pop().type + '}');
       out.push(line);
       continue;
@@ -277,21 +328,23 @@ function mdToLatex(md) {
   let result = md.replace(/\r\n?/g, '\n');
 
   result = result.replace(
-    /^[ \t]*(?:>[ \t]?)*(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\1[ \t]*$/gm,
-    (_m, _fence, info, code) => {
+    /^([ \t]*(?:>[ \t]?)*)(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\2[ \t]*$/gm,
+    (_m, prefix, _fence, info, code) => {
       const lang = info.trim().split(/\s+/)[0] || '';
-      const cleaned = code.split('\n').map((line) => line.replace(/^[ \t]*>[ \t]?/, '')).join('\n');
+      const depth = quoteDepth(prefix);
+      const cleaned = code.split('\n').map((line) => stripQuoteMarkers(line, depth)).join('\n');
       codeBlocks.push({ lang, code: cleaned });
-      return make('CODEBLOCK', codeBlocks.length - 1);
+      return `${prefix}${make('CODEBLOCK', codeBlocks.length - 1)}`;
     }
   );
 
   result = result.replace(
-    /^[ \t]*(?:>[ \t]?)*\$\$[ \t]*\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\$\$[ \t]*$/gm,
-    (_m, tex) => {
-      const cleaned = tex.split('\n').map((line) => line.replace(/^[ \t]*>[ \t]?/, '')).join('\n');
+    /^([ \t]*(?:>[ \t]?)*)\$\$[ \t]*\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\$\$[ \t]*$/gm,
+    (_m, prefix, tex) => {
+      const depth = quoteDepth(prefix);
+      const cleaned = tex.split('\n').map((line) => stripQuoteMarkers(line, depth)).join('\n');
       mathBlocks.push(cleaned);
-      return make('MATHBLOCK', mathBlocks.length - 1);
+      return `${prefix}${make('MATHBLOCK', mathBlocks.length - 1)}`;
     }
   );
 
@@ -304,21 +357,26 @@ function mdToLatex(md) {
     return '';
   });
 
-  // Protect tables before inline/block processing.
+  // Protect tables before inline/block processing. Tables nested in
+  // blockquotes keep their quote prefix so the quote survives, while only the
+  // table body is stored and parsed.
   {
     const lines = result.split('\n');
     const out = [];
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
-        const tableLines = [lines[i], lines[i + 1]];
+      const header = splitQuote(lines[i]);
+      if (header.text.includes('|') && i + 1 < lines.length && isTableSeparator(splitQuote(lines[i + 1]).text)) {
+        const tableLines = [header.text, splitQuote(lines[i + 1]).text];
         i += 2;
-        while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
-          tableLines.push(lines[i]);
+        while (i < lines.length) {
+          const row = splitQuote(lines[i]);
+          if (!row.text.includes('|') || !row.text.trim()) break;
+          tableLines.push(row.text);
           i++;
         }
         i--;
         tables.push(tableLines.join('\n'));
-        out.push(make('TABLE', tables.length - 1));
+        out.push(`${header.prefix}${make('TABLE', tables.length - 1)}`);
         continue;
       }
       out.push(lines[i]);

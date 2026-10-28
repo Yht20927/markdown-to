@@ -2,7 +2,7 @@
 
 > [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：12 个 shared 模块 · 多项 P0 修复 · 145 个回归测试 · 美化增强
+> **v2.0** — 架构重构：13 个 shared 模块 · 多项 P0 修复 · 194 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -14,10 +14,10 @@
 | **md-to-word** | Word .doc / .docx | `.doc` mso 样式；`.docx` 原生 OOXML（图片/表格/列表/公式/代码样式） | <0.5s |
 | **md-to-html** | HTML5 | GitHub 风格 CSS, `--theme dark` 暗色模式 | <0.5s |
 | **md-to-image** | PNG / JPG | `--scale` 高 DPI, `--watermark` 水印, `--padding` | ~2s |
-| **md-to-text** | 纯文本 | 代码块保护, 图片/链接顺序修正 | <0.1s |
-| **md-to-latex** | LaTeX .tex | CJK 自动检测 → ctexart, 特殊字符转义 | <0.3s |
-| **md-to-rst** | reStructuredText | 动态标题下划线, 脚注 `#` 配对 | <0.3s |
-| **md-to-confluence** | Confluence wiki | `***粗斜体***` 支持 | <0.2s |
+| **md-to-text** | 纯文本 | 代码块保护, 图片/链接顺序修正, 转义/HTML 实体, 邮箱自动链接 | <0.1s |
+| **md-to-latex** | LaTeX .tex | CJK 自动检测 → ctexart, setext 标题, 列表嵌套/续行, 转义与链接括号 | <0.3s |
+| **md-to-rst** | reStructuredText | 动态标题下划线, 公式 `:math:`/`.. math::`（含同行 `$$`）, 引用块嵌套/表格/代码, HTML 实体/邮箱 | <0.3s |
+| **md-to-confluence** | Confluence wiki | `***粗斜体***`, `{quote}` 引用宏（支持嵌套）, setext 标题, 转义/HTML 实体 | <0.2s |
 
 > `md-to-word` 的 `.doc` 是 HTML-as-doc（兼容 Word），`.docx` 是原生 OOXML；公式以 `Inline Math`/`Math Block` 样式保留，`word-to-md` 可还原为 `$...$`/`$$...$$`。
 
@@ -188,8 +188,8 @@ markdownFomart/
 ├── README.md
 ├── REFACTOR_PLAN.md          ← 重构方案（v2.0 蓝图）
 ├── package.json              ← npm workspace 根配置
-├── shared/                   ← 共享模块（12 个）
-│   ├── __tests__/            ← 共享模块测试（93 个）
+├── shared/                   ← 共享模块（13 个）
+│   ├── __tests__/            ← 共享模块测试（97 个）
 │   ├── html-renderer.js
 │   ├── placeholders.js
 │   ├── gfm-table.js
@@ -228,13 +228,13 @@ markdownFomart/
 ## 测试
 
 ```bash
-# 运行所有测试（145 个）
+# 运行所有测试（194 个）
 npm test
 
-# 仅共享模块测试（93 个）
+# 仅共享模块测试（97 个）
 npm run test:shared
 
-# 仅工具集成测试（52 个）
+# 仅工具集成测试（97 个）
 npm run test:tools
 
 # 语法检查
@@ -246,7 +246,7 @@ npm run lint
 ### 数据正确性 (多项 P0 修复)
 - 表格工具：空 cell 保留、`\|` 转义、RFC 4180 CSV 引号、BOM、引号内分隔符检测
 - 文本工具：图片/链接顺序修正、代码块占位符保护、粗斜体 `***` 嵌套
-- LaTeX/RST：特殊字符转义、标题下划线长度匹配、脚注配对、CJK 支持
+- LaTeX/RST：特殊字符转义、标题下划线长度匹配、脚注配对、CJK 支持、引用块嵌套与引用内代码/公式/表格
 - 反向转换：GFM 表格 rule 补齐、无 thead 表格处理；HTML 还原 KaTeX 源码/任务列表/表格对齐/删除线；PDF 基于字体/坐标重建标题、列表、表格和代码块
 
 ### 依赖安全
@@ -254,7 +254,7 @@ npm run lint
 - `npm audit --omit=dev` 当前为 0 vulnerabilities
 
 ### 架构统一
-- 抽取 12 个 shared 模块消除重复代码
+- 抽取 13 个 shared 模块消除重复代码
 - 全部 16 工具使用统一 CLI (`shared/cli.js`)
 - npm workspace 统一依赖版本
 - 浏览器工具默认禁用 JavaScript 与远程请求，显式 `--allow-remote` 才放行
@@ -275,7 +275,7 @@ npm run lint
 | 批量处理 | 单个文件 | 支持脚本批量 |
 | 集成 | 手动操作 | 可嵌入 CI/脚本 |
 | 主题 | — | 29 个 PDF 主题 + 暗色模式 |
-| 数据正确性 | — | 21 项 P0 bug 修复 + 145 回归测试 |
+| 数据正确性 | — | 21 项 P0 bug 修复 + 194 回归测试 |
 | 收费 | 免费 | 开源 MIT |
 
 ## License

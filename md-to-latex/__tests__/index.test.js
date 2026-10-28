@@ -57,6 +57,17 @@ describe('md-to-latex P0 fixes', () => {
     assert.ok(out.includes('\\begin{itemize}'), out);
   });
 
+  it('should keep quoted code and display math inside the quote', () => {
+    const out = runConvert('> ```js\n> const x = 1;\n> ```\n>\n> $$\n> a+b\n> $$');
+    const start = out.indexOf('\\begin{quote}');
+    const end = out.indexOf('\\end{quote}');
+    assert.ok(start >= 0, out);
+    assert.ok(out.indexOf('\\begin{lstlisting}') > start, out);
+    assert.ok(out.indexOf('\\[\na+b\n\\]') > start, out);
+    assert.ok(out.indexOf('\\begin{lstlisting}') < end, out);
+    assert.ok(out.indexOf('\\[\na+b\n\\]') < end, out);
+  });
+
   it('should join multiline list items', () => {
     const out = runConvert('- one\n  continuation\n   - nested\n1. first\n   more\n2. second');
     assert.ok(out.includes('\\item one continuation'), out);
@@ -69,5 +80,85 @@ describe('md-to-latex P0 fixes', () => {
     const out = runConvert('[x](https://e.test) and note [^1]\n\n[^1]: 50%');
     assert.ok(out.includes('\\href{https://e.test}{x}'), out);
     assert.ok(out.includes('\\footnote{50\\%}'), out);
+  });
+
+  it('should render tables nested in blockquotes', () => {
+    const out = runConvert('> | A | B |\n> |---|---|\n> | a | b |');
+    const start = out.indexOf('\\begin{quote}');
+    const end = out.indexOf('\\end{quote}');
+    assert.ok(start >= 0, out);
+    assert.ok(out.indexOf('\\begin{tabular}') > start, out);
+    assert.ok(out.indexOf('\\begin{tabular}') < end, out);
+    assert.ok(out.includes('A & B \\\\'), out);
+    assert.ok(!out.includes('| A |'), out);
+  });
+
+  it('should keep > content inside fenced code', () => {
+    const out = runConvert('```diff\n> old line\n< new line\n```');
+    assert.ok(out.includes('> old line'), out);
+  });
+
+  it('should keep backslash-escaped markdown literals', () => {
+    const out = runConvert('Price is \\$5 and \\*not italic\\*.');
+    assert.ok(out.includes('Price is \\$5 and *not italic*.'), out);
+  });
+
+  it('should handle link destinations with parentheses and titles', () => {
+    const out = runConvert('[wiki](https://en.wikipedia.org/wiki/Foo_(bar)) and [x](https://e.test/a "title")');
+    assert.ok(out.includes('\\href{https://en.wikipedia.org/wiki/Foo_(bar)}{wiki}'), out);
+    assert.ok(out.includes('\\href{https://e.test/a}{x}'), out);
+    assert.ok(!out.includes('title'), out);
+  });
+
+  it('should handle image destinations with parentheses', () => {
+    const out = runConvert('![alt](dir/pic_(1).png)');
+    assert.ok(out.includes('\\includegraphics[width=\\linewidth]{dir/pic_(1).png}'), out);
+  });
+
+  it('should convert emphasis nested inside bold', () => {
+    const out = runConvert('**bold with *italic* inside**');
+    assert.ok(out.includes('\\textbf{bold with \\textit{italic} inside}'), out);
+  });
+
+  it('should keep nested lists together across blank lines', () => {
+    const out = runConvert('- top\n\n  - nested a\n  - nested b\n\n- top2');
+    assert.strictEqual((out.match(/\\begin\{itemize\}/g) || []).length, 2, out);
+    assert.strictEqual((out.match(/\\end\{itemize\}/g) || []).length, 2, out);
+    assert.ok(out.includes('\\item nested a'), out);
+  });
+
+  it('should decode HTML entities and email autolinks', () => {
+    const out = runConvert('AT&amp;T and <a.b+c@example.co.uk>');
+    assert.ok(out.includes('AT\\&T'), out);
+    assert.ok(out.includes('\\url{a.b+c@example.co.uk}'), out);
+    assert.ok(!out.includes('amp;'), out);
+  });
+
+  it('should strip closing hashes from headings', () => {
+    assert.ok(runConvert('## Title ##').includes('\\subsection{Title}'));
+  });
+
+  it('should convert setext headings inside quotes to bold', () => {
+    const out = runConvert('> Title\n> =====\n>\n> body');
+    assert.ok(out.includes('\\textbf{Title}'), out);
+    assert.ok(!out.includes('====='), out);
+  });
+
+  it('should not treat a rule after a list item as a setext heading', () => {
+    const out = runConvert('- item\n---\n* next');
+    assert.ok(out.includes('\\hrulefill'), out);
+    assert.ok(!out.includes('\\subsection'), out);
+  });
+
+  it('should keep indented continuation paragraphs inside list items', () => {
+    const out = runConvert('- item\n\n  continuation\n\n- next');
+    assert.strictEqual((out.match(/\\begin\{itemize\}/g) || []).length, 1, out);
+    assert.ok(out.includes('continuation'), out);
+  });
+
+  it('should not treat a rule after a code block as a setext heading', () => {
+    const out = runConvert('```\ncode\n```\n---');
+    assert.ok(out.includes('\\hrulefill'), out);
+    assert.ok(!out.includes('\\subsection'), out);
   });
 });

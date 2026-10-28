@@ -5,18 +5,9 @@ const path = require('path');
 const { resolveInOut, readInput, writeOutput, handleError } = require('../shared/cli');
 const { stripFrontmatter } = require('../shared/frontmatter');
 const { make, assertAllRestored } = require('../shared/placeholders');
+const { decodeEntities } = require('../shared/entities');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
-
-function decodeEntities(text) {
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&amp;/g, '&');
-}
 
 function splitTableRow(line) {
   const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '');
@@ -47,10 +38,25 @@ function formatTableRow(line) {
   return splitTableRow(line).join(' | ');
 }
 
+function quoteDepth(prefix) {
+  return (prefix.match(/>/g) || []).length;
+}
+
+function stripQuoteMarkers(line, depth) {
+  let text = line;
+  for (let i = 0; i < depth; i++) {
+    const next = text.replace(/^[ \t]*>[ \t]?/, '');
+    if (next === text) break;
+    text = next;
+  }
+  return text;
+}
+
 function markdownToText(md) {
   const codeBlocks = [];
   const inlineCodes = [];
   const mathSpans = [];
+  const escapedChars = [];
   const footnoteDefs = [];
   const linkDefs = new Map();
 
@@ -58,9 +64,10 @@ function markdownToText(md) {
 
   // Fenced code blocks first, including blockquote/list-indented fences.
   result = result.replace(
-    /^[ \t]*(?:>[ \t]?)*(`{3,}|~{3,})[^\n]*\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\1[ \t]*$/gm,
-    (_m, _fence, code) => {
-      const cleaned = code.split('\n').map((line) => line.replace(/^[ \t]*>[ \t]?/, '')).join('\n');
+    /^([ \t]*(?:>[ \t]?)*)(`{3,}|~{3,})[^\n]*\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\2[ \t]*$/gm,
+    (_m, prefix, _fence, code) => {
+      const depth = quoteDepth(prefix);
+      const cleaned = code.split('\n').map((line) => stripQuoteMarkers(line, depth)).join('\n');
       codeBlocks.push(cleaned);
       return make('CB', codeBlocks.length - 1);
     }
@@ -80,6 +87,13 @@ function markdownToText(md) {
     return make('IM', mathSpans.length - 1);
   });
 
+  // Backslash-escaped Markdown characters must survive emphasis/link passes
+  // and be emitted literally.
+  result = result.replace(/\\([\\`*_{}\[\]()#+\-.!>~|$])/g, (_m, char) => {
+    escapedChars.push(char);
+    return make('ESC', escapedChars.length - 1);
+  });
+
   result = result.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
   result = result.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
   result = result.replace(/<!--[\s\S]*?-->/g, '');
@@ -94,7 +108,7 @@ function markdownToText(md) {
     return '';
   });
 
-  result = result.replace(/!\[[^\]]*\]\([^)]*\)/g, '');
+  result = result.replace(/!\[[^\]]*\]\(\s*(?:[^()\s\\]|\\.|\([^()]*\))+(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\)/g, '');
   result = result.replace(/!\[[^\]]*\]\[[^\]]*\]/g, '');
 
   result = result.replace(/\[\^([^\]]+)\]/g, '[$1]');
@@ -102,14 +116,15 @@ function markdownToText(md) {
     const key = (label || text).toLowerCase();
     return linkDefs.has(key) ? text : text;
   });
-  result = result.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  result = result.replace(/\[([^\]]+)\]\(\s*(?:[^()\s\\]|\\.|\([^()]*\))+(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\)/g, '$1');
 
   result = result.replace(/<((?:https?:\/\/|mailto:)[^>]+)>/gi, (_m, url) => url.replace(/^mailto:/i, ''));
+  result = result.replace(/<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>/g, '$1');
   result = result.replace(/<br\s*\/?>/gi, '\n');
   result = result.replace(/<\/?[^>]+>/g, '');
 
-  result = result.replace(/^#{1,6}\s+/gm, '');
   result = result.replace(/^\s*(?:>\s?)+/gm, '');
+  result = result.replace(/^#{1,6}[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/gm, '$1');
   result = result.replace(/^\s*(?:([-*_])\1{2,}|={3,})\s*$/gm, '');
 
   // GFM tables: keep readable rows and drop the separator line.
@@ -135,10 +150,10 @@ function markdownToText(md) {
   result = result.replace(/^(\s*)[-*+]\s+(.+)$/gm, '$1• $2');
   result = result.replace(/^(\s*)(\d+)[.)]\s+(.+)$/gm, '$1$2. $3');
 
-  result = result.replace(/\*\*\*([^*\n]+)\*\*\*/g, '$1');
-  result = result.replace(/\*\*([^*\n]+)\*\*/g, '$1');
+  result = result.replace(/\*\*\*((?:[^*\n]|\*(?!\*))+)\*\*\*/g, '$1');
+  result = result.replace(/\*\*((?:[^*\n]|\*(?!\*))+)\*\*/g, '$1');
   result = result.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '$1');
-  result = result.replace(/(?<!\w)__([^_\n]+)__(?!\w)/g, '$1');
+  result = result.replace(/(?<!\w)__((?:[^_\n]|_(?!_))+?)__(?!\w)/g, '$1');
   result = result.replace(/(?<!\w)_([^_\n]+)_(?!\w)/g, '$1');
   result = result.replace(/~~([^~\n]+)~~/g, '$1');
 
@@ -146,6 +161,9 @@ function markdownToText(md) {
   result = decodeEntities(result);
   result = result.replace(/\n{3,}/g, '\n\n').trim();
 
+  for (let i = 0; i < escapedChars.length; i++) {
+    result = result.split(make('ESC', i)).join(escapedChars[i]);
+  }
   for (let i = 0; i < mathSpans.length; i++) {
     result = result.split(make('BM', i)).join(mathSpans[i]);
     result = result.split(make('IM', i)).join(mathSpans[i]);

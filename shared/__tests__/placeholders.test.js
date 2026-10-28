@@ -18,9 +18,11 @@ describe('placeholders', () => {
     const ph1 = make('CB', 5);
     const ph2 = make('IM', 3);
     const ph3 = make('CODEBLOCK', 0);
-    const text = `before ${ph1} middle ${ph2} end ${ph3}`;
+    const ph4 = make('MATHBLOCK', 2);
+    const ph5 = make('ESC', 4);
+    const text = `before ${ph1} middle ${ph2} end ${ph3} math ${ph4} esc ${ph5}`;
     const matches = text.match(RE);
-    assert.strictEqual(matches.length, 3);
+    assert.strictEqual(matches.length, 5);
   });
 
   it('should not match non-placeholder text', () => {

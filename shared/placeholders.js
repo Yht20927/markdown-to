@@ -13,7 +13,7 @@ function make(tag, i) {
 }
 
 // Matches any placeholder: CB, IM, BM, CODEBLOCK, TABLE, FN, etc.
-const RE = /\x00(CB|IM|BM|CODEBLOCK|TABLE|FN|FNDEF|BOLD|BOLDITALIC|IC|FENCED):\d+\x00/g;
+const RE = /\x00(CB|IM|BM|CODEBLOCK|MATHBLOCK|TABLE|FN|FNDEF|BOLD|BOLDITALIC|IC|FENCED|ESC):\d+\x00/g;
 
 /**
  * Assert all placeholders have been restored. Throws if any remain.

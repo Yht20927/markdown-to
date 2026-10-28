@@ -70,4 +70,53 @@ describe('md-to-text P0 fixes', () => {
     assert.ok(text.includes('Text [1]'), text);
     assert.ok(text.includes('[1] note'), text);
   });
+
+  it('should strip all quote markers from nested quoted code and text', () => {
+    const text = runConvert('> > quoted text\n>\n> > ```js\n> > const x = 1;\n> > ```\n>\n> tail');
+    assert.ok(text.includes('quoted text'), text);
+    assert.ok(text.includes('const x = 1;'), text);
+    assert.ok(text.includes('tail'), text);
+    assert.ok(!text.includes('>'), text);
+  });
+
+  it('should keep > content inside fenced code', () => {
+    const text = runConvert('```diff\n> old line\n< new line\n```');
+    assert.ok(text.includes('> old line'), text);
+  });
+
+  it('should strip only the quote level from quoted code content', () => {
+    const text = runConvert('> ```\n> > literal\n> ```');
+    assert.ok(text.includes('> literal'), text);
+  });
+
+  it('should keep backslash-escaped markdown literals', () => {
+    const text = runConvert('Price is \\$5 and \\*not italic\\* and \\[not a link\\].');
+    assert.ok(text.includes('Price is $5 and *not italic* and [not a link].'), text);
+  });
+
+  it('should handle link destinations with parentheses and titles', () => {
+    const text = runConvert('[wiki](https://en.wikipedia.org/wiki/Foo_(bar)) and [x](https://e.test/a "title").');
+    assert.ok(text.includes('wiki and x.'), text);
+  });
+
+  it('should flatten emphasis nested inside bold', () => {
+    const text = runConvert('**bold with *italic* inside**');
+    assert.strictEqual(text.trim(), 'bold with italic inside');
+  });
+
+  it('should strip heading markers inside blockquotes', () => {
+    const text = runConvert('> ## Quoted heading\n>\n> body');
+    assert.ok(text.includes('Quoted heading'), text);
+    assert.ok(!text.includes('##'), text);
+  });
+
+  it('should decode HTML entities and email autolinks', () => {
+    const text = runConvert('AT&amp;T &lt;x&gt; <a.b+c@example.co.uk>');
+    assert.ok(text.includes('AT&T <x> a.b+c@example.co.uk'), text);
+    assert.ok(!text.includes('&amp;'), text);
+  });
+
+  it('should strip closing hashes from headings', () => {
+    assert.strictEqual(runConvert('## Title ##').trim(), 'Title');
+  });
 });

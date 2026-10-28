@@ -5,6 +5,7 @@ const path = require('path');
 const { resolveInOut, readInput, writeOutput, handleError } = require('../shared/cli');
 const { stripFrontmatter } = require('../shared/frontmatter');
 const { make, assertAllRestored } = require('../shared/placeholders');
+const { decodeEntities } = require('../shared/entities');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
 
@@ -44,9 +45,34 @@ function tableToConfluence(rows) {
   return lines.join('\n');
 }
 
+function quoteDepth(prefix) {
+  return (prefix.match(/>/g) || []).length;
+}
+
+function stripQuoteMarkers(line, depth) {
+  let text = line;
+  for (let i = 0; i < depth; i++) {
+    const next = text.replace(/^[ \t]*>[ \t]?/, '');
+    if (next === text) break;
+    text = next;
+  }
+  return text;
+}
+
+function convertQuoteBlocks(text) {
+  return text.replace(/^(?:[ \t]*>[^\n]*(?:\n|$))+/gm, (match) => {
+    const inner = match.replace(/\n$/, '').split('\n')
+      .map((line) => line.replace(/^[ \t]*>[ \t]?/, ''))
+      .join('\n');
+    const suffix = match.endsWith('\n') ? '\n' : '';
+    return `{quote}\n${convertQuoteBlocks(inner)}\n{quote}${suffix}`;
+  });
+}
+
 function mdToConfluence(md) {
   const codeBlocks = [];
   const inlineCodes = [];
+  const escapedSpans = [];
   const footnoteDefs = [];
   const boldSpans = [];
   const boldItalicSpans = [];
@@ -55,19 +81,33 @@ function mdToConfluence(md) {
 
   let result = md.replace(/\r\n?/g, '\n');
 
+  // Extract fenced code before quote conversion so `>` markers inside code
+  // blocks are preserved and never mistaken for blockquotes.
   result = result.replace(
-    /^[ \t]*(?:>[ \t]?)*(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\1[ \t]*$/gm,
-    (_m, _fence, info, code) => {
+    /^([ \t]*(?:>[ \t]?)*)(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n[ \t]*(?:>[ \t]?)*\2[ \t]*$/gm,
+    (_m, prefix, _fence, info, code) => {
       const lang = info.trim().split(/\s+/)[0] || '';
-      const cleaned = code.split('\n').map((line) => line.replace(/^[ \t]*>[ \t]?/, '')).join('\n');
+      const depth = quoteDepth(prefix);
+      const cleaned = code.split('\n').map((line) => stripQuoteMarkers(line, depth)).join('\n');
       codeBlocks.push({ lang, code: cleaned });
-      return make('CODEBLOCK', codeBlocks.length - 1);
+      return `${prefix}${make('CODEBLOCK', codeBlocks.length - 1)}`;
     }
   );
+
+  // Unwrap blockquotes before block processing so headings, lists, tables and
+  // nested quotes inside them are converted normally.
+  result = convertQuoteBlocks(result);
 
   result = result.replace(/(`+)([\s\S]*?)\1/g, (_m, _ticks, code) => {
     inlineCodes.push(code);
     return make('IC', inlineCodes.length - 1);
+  });
+
+  // Escaped Markdown characters stay literal and must not be parsed as
+  // emphasis, links or list markers.
+  result = result.replace(/\\([\\`*_{}\[\]()#+\-.!>~|])/g, (_m, char) => {
+    escapedSpans.push(char);
+    return make('ESC', escapedSpans.length - 1);
   });
 
   result = result.replace(/^\[\^(.+?)\]:\s*(.*)$/gm, (_m, label, content) => {
@@ -81,27 +121,19 @@ function mdToConfluence(md) {
   });
 
   result = result.replace(/<((?:https?:\/\/|mailto:)[^>]+)>/gi, (_m, url) => url.replace(/^mailto:/i, ''));
+  result = result.replace(/<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>/g, '$1');
   result = result.replace(/<\/?[^>]+>/g, '');
+  result = decodeEntities(result);
 
-  result = result.replace(/^######\s+(.+)$/gm, 'h6. $1');
-  result = result.replace(/^#####\s+(.+)$/gm, 'h5. $1');
-  result = result.replace(/^####\s+(.+)$/gm, 'h4. $1');
-  result = result.replace(/^###\s+(.+)$/gm, 'h3. $1');
-  result = result.replace(/^##\s+(.+)$/gm, 'h2. $1');
-  result = result.replace(/^#\s+(.+)$/gm, 'h1. $1');
+  result = result.replace(/^(?!\s*(?:[-*+]\s|\d+[.)]\s|>|#|\||\x00))([^\n]*\S[^\n]*)\n=+[ \t]*$/gm, '# $1');
+  result = result.replace(/^(?!\s*(?:[-*+]\s|\d+[.)]\s|>|#|\||\x00))([^\n]*\S[^\n]*)\n-+[ \t]*$/gm, '## $1');
+  result = result.replace(/^(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/gm, (_m, hashes, title) => `h${hashes.length}. ${title}`);
 
   result = result.replace(/\*\*\*([^*\n]+)\*\*\*/g, (_m, text) => {
     boldItalicSpans.push(text);
     return make('BOLDITALIC', boldItalicSpans.length - 1);
   });
-  result = result.replace(/\*\*([^*\n]+)\*\*/g, (_m, text) => {
-    boldSpans.push(text);
-    return make('BOLD', boldSpans.length - 1);
-  });
-  result = result.replace(/(?<!\w)__([^_\n]+)__(?!\w)/g, (_m, text) => {
-    boldSpans.push(text);
-    return make('BOLD', boldSpans.length - 1);
-  });
+  // Italic first so emphasis nested inside bold is not swallowed as literal text.
   result = result.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, (_m, text) => {
     italicSpans.push(text);
     return make('IM', italicSpans.length - 1);
@@ -110,24 +142,33 @@ function mdToConfluence(md) {
     italicSpans.push(text);
     return make('IM', italicSpans.length - 1);
   });
+  result = result.replace(/\*\*((?:[^*\n]|\*(?!\*))+)\*\*/g, (_m, text) => {
+    boldSpans.push(text);
+    return make('BOLD', boldSpans.length - 1);
+  });
+  result = result.replace(/(?<!\w)__((?:[^_\n]|_(?!_))+?)__(?!\w)/g, (_m, text) => {
+    boldSpans.push(text);
+    return make('BOLD', boldSpans.length - 1);
+  });
   result = result.replace(/~~([^~\n]+)~~/g, '-$1-');
 
   result = result.replace(/\[\^(.+?)\]/g, (_m, label) => `[fn:${label}]`);
 
   const LINK_PIPE = '\u0001PIPE\u0001';
-  result = result.replace(/!\[(.+?)\]\((.+?)\)/g, '!$2!');
+  const inlineTarget = String.raw`\s*((?:[^()\s\\]|\\.|\([^()]*\))+)(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*`;
+  result = result.replace(new RegExp(String.raw`!\[([^\]]*)\]\(${inlineTarget}\)`, 'g'), (_m, _alt, url) => `!${url}!`);
   result = result.replace(/\[([^\]]+)\]\[([^\]]*)\]/g, (match, text, label) => {
     const url = linkDefs.get((label || text).toLowerCase());
     return url ? `[${text}${LINK_PIPE}${url}]` : text;
   });
-  result = result.replace(/\[([^\]]+)\]\((.+?)\)/g, (_m, text, url) => `[${text}${LINK_PIPE}${url}]`);
+  result = result.replace(new RegExp(String.raw`\[([^\]]+)\]\(${inlineTarget}\)`, 'g'), (_m, text, url) => `[${text}${LINK_PIPE}${url}]`);
 
-  result = result.replace(/^(\s*)[-*+]\s+/gm, (_m, indent) => {
-    const level = Math.floor(indent.length / 2) + 1;
+  result = result.replace(/^([ \t]*)[-*+][ \t]+/gm, (_m, indent) => {
+    const level = Math.floor(indent.replace(/\t/g, '  ').length / 2) + 1;
     return '*'.repeat(level) + ' ';
   });
-  result = result.replace(/^(\s*)\d+[.)]\s+/gm, (_m, indent) => {
-    const level = Math.floor(indent.length / 2) + 1;
+  result = result.replace(/^([ \t]*)\d+[.)][ \t]+/gm, (_m, indent) => {
+    const level = Math.floor(indent.replace(/\t/g, '  ').length / 2) + 1;
     return '#'.repeat(level) + ' ';
   });
   result = result.replace(/^([-*_])\1{2,}$/gm, '----');
@@ -156,11 +197,6 @@ function mdToConfluence(md) {
 
   result = result.split(LINK_PIPE).join('|');
 
-  result = result.replace(/((?:^>[^\n]*\n?)+)/gm, (match) => {
-    const lines = match.trimEnd().split('\n').map((line) => line.replace(/^>\s?/, ''));
-    return lines.map((line) => 'bq. ' + line).join('\n') + '\n';
-  });
-
   for (let i = 0; i < footnoteDefs.length; i++) {
     const fn = footnoteDefs[i];
     result = result.split(make('FNDEF', i)).join(`[fn:${fn.label}] ${fn.content}`);
@@ -176,6 +212,9 @@ function mdToConfluence(md) {
   }
   for (let i = 0; i < italicSpans.length; i++) {
     result = result.split(make('IM', i)).join('_' + italicSpans[i] + '_');
+  }
+  for (let i = 0; i < escapedSpans.length; i++) {
+    result = result.split(make('ESC', i)).join('\\' + escapedSpans[i]);
   }
   for (let i = 0; i < codeBlocks.length; i++) {
     const cb = codeBlocks[i];
