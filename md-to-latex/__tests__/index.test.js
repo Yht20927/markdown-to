@@ -170,4 +170,10 @@ describe('md-to-latex P0 fixes', () => {
   it('should keep word boundaries around HTML breaks and block tags', () => {
     assert.ok(runConvert('a<br>b and c</p><p>d').includes('a b and c d'));
   });
+
+  it('should convert Markdown hard breaks', () => {
+    const out = runConvert('line one  \nline two\n\nline three\\\nline four');
+    assert.ok(out.includes('line one\\\\\nline two'), out);
+    assert.ok(out.includes('line three\\\\\nline four'), out);
+  });
 });

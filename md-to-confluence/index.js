@@ -200,6 +200,9 @@ function mdToConfluence(md) {
 
   result = result.split(LINK_PIPE).join('|');
 
+  // Markdown hard breaks (two trailing spaces or a trailing backslash).
+  result = result.replace(/(?: {2,}|(?<!\\)\\)\n/g, '\\\\\n');
+
   for (let i = 0; i < footnoteDefs.length; i++) {
     const fn = footnoteDefs[i];
     result = result.split(make('FNDEF', i)).join(`[fn:${fn.label}] ${fn.content}`);

@@ -259,7 +259,9 @@ function processBlocks(md, context, { inQuote = false } = {}) {
       continue;
     }
 
-    out.push(renderInline(line, context));
+    const hardBreak = /(?: {2,}|(?<!\\)\\)$/.test(line);
+    const text = hardBreak ? line.replace(/(?: {2,}|\\)$/, '') : line;
+    out.push(renderInline(text, context) + (hardBreak ? '\\\\' : ''));
   }
   flushQuote();
   return out.join('\n');

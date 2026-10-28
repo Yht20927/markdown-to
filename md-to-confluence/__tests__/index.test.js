@@ -138,4 +138,10 @@ describe('md-to-confluence P0 fixes', () => {
   it('should keep word boundaries around HTML breaks and block tags', () => {
     assert.strictEqual(runConvert('a<br>b and c</p><p>d').trim(), 'a b and c d');
   });
+
+  it('should convert Markdown hard breaks', () => {
+    const out = runConvert('line one  \nline two\n\nline three\\\nline four');
+    assert.ok(out.includes('line one\\\\\nline two'), out);
+    assert.ok(out.includes('line three\\\\\nline four'), out);
+  });
 });
