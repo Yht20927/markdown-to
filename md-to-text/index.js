@@ -121,6 +121,7 @@ function markdownToText(md) {
   result = result.replace(/<((?:https?:\/\/|mailto:)[^>]+)>/gi, (_m, url) => url.replace(/^mailto:/i, ''));
   result = result.replace(/<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>/g, '$1');
   result = result.replace(/<br\s*\/?>/gi, '\n');
+  result = result.replace(/<\/(?:p|div|li|tr|h[1-6])>/gi, ' ');
   result = result.replace(/<\/?[^>]+>/g, '');
 
   result = result.replace(/^\s*(?:>\s?)+/gm, '');

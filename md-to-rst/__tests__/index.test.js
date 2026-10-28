@@ -153,4 +153,8 @@ describe('md-to-rst P0 fixes', () => {
     assert.ok(rst.includes('.. [#1] First. Second.'), rst);
     assert.ok(!/^\s+Second/m.test(rst), rst);
   });
+
+  it('should keep word boundaries around HTML breaks and block tags', () => {
+    assert.strictEqual(runConvert('a<br>b and c</p><p>d').trim(), 'a b and c d');
+  });
 });

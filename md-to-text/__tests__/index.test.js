@@ -125,4 +125,9 @@ describe('md-to-text P0 fixes', () => {
     assert.ok(text.includes('[1] First. Second.'), text);
     assert.ok(!/^\s+Second/m.test(text), text);
   });
+
+  it('should keep word boundaries around HTML breaks and block tags', () => {
+    const text = runConvert('a<br>b and c</p><p>d');
+    assert.ok(text.includes('a\nb and c d'), text);
+  });
 });

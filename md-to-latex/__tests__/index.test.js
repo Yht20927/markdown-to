@@ -166,4 +166,8 @@ describe('md-to-latex P0 fixes', () => {
     const out = runConvert('Text[^1].\n\n[^1]: First.\n\n    Second.');
     assert.ok(out.includes('\\footnote{First. Second.}'), out);
   });
+
+  it('should keep word boundaries around HTML breaks and block tags', () => {
+    assert.ok(runConvert('a<br>b and c</p><p>d').includes('a b and c d'));
+  });
 });

@@ -152,6 +152,8 @@ function mdToRst(md) {
     return url.replace(/^mailto:/i, '');
   });
   result = result.replace(/<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>/g, '$1');
+  result = result.replace(/<br\s*\/?>/gi, ' ');
+  result = result.replace(/<\/(?:p|div|li|tr|h[1-6])>/gi, ' ');
   result = result.replace(/<\/?[^>]+>/g, '');
   result = decodeEntities(result);
   result = result.replace(/^([-*_])\1{2,}$/gm, '----');

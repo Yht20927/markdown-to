@@ -134,4 +134,8 @@ describe('md-to-confluence P0 fixes', () => {
     assert.ok(out.includes('[fn:1] First. Second.'), out);
     assert.ok(!/^\s+Second/m.test(out), out);
   });
+
+  it('should keep word boundaries around HTML breaks and block tags', () => {
+    assert.strictEqual(runConvert('a<br>b and c</p><p>d').trim(), 'a b and c d');
+  });
 });
