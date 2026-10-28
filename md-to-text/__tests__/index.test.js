@@ -119,4 +119,10 @@ describe('md-to-text P0 fixes', () => {
   it('should strip closing hashes from headings', () => {
     assert.strictEqual(runConvert('## Title ##').trim(), 'Title');
   });
+
+  it('should keep footnote continuation paragraphs in the note', () => {
+    const text = runConvert('Text[^1].\n\n[^1]: First.\n\n    Second.');
+    assert.ok(text.includes('[1] First. Second.'), text);
+    assert.ok(!/^\s+Second/m.test(text), text);
+  });
 });

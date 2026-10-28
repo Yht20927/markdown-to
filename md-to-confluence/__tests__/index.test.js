@@ -128,4 +128,10 @@ describe('md-to-confluence P0 fixes', () => {
     assert.ok(out.includes('----'), out);
     assert.ok(!out.includes('h2.'), out);
   });
+
+  it('should keep footnote continuation paragraphs in the note', () => {
+    const out = runConvert('Text[^1].\n\n[^1]: First.\n\n    Second.');
+    assert.ok(out.includes('[fn:1] First. Second.'), out);
+    assert.ok(!/^\s+Second/m.test(out), out);
+  });
 });

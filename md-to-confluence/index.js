@@ -6,6 +6,7 @@ const { resolveInOut, readInput, writeOutput, handleError } = require('../shared
 const { stripFrontmatter } = require('../shared/frontmatter');
 const { make, assertAllRestored } = require('../shared/placeholders');
 const { decodeEntities } = require('../shared/entities');
+const { extractFootnoteDefs } = require('../shared/footnote-defs');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
 
@@ -110,7 +111,7 @@ function mdToConfluence(md) {
     return make('ESC', escapedSpans.length - 1);
   });
 
-  result = result.replace(/^\[\^(.+?)\]:\s*(.*)$/gm, (_m, label, content) => {
+  result = extractFootnoteDefs(result, (label, content) => {
     footnoteDefs.push({ label, content });
     return make('FNDEF', footnoteDefs.length - 1);
   });

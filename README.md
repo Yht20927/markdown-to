@@ -2,7 +2,7 @@
 
 > [md-to.com](https://md-to.com) 的本地 CLI 复刻版 — 16 个工具，默认本地运行、禁止远程请求，隐私安全。
 >
-> **v2.0** — 架构重构：13 个 shared 模块 · 多项 P0 修复 · 194 个回归测试 · 美化增强
+> **v2.0** — 架构重构：14 个 shared 模块 · 多项 P0 修复 · 201 个回归测试 · 美化增强
 
 ## 工具概览
 
@@ -188,8 +188,8 @@ markdownFomart/
 ├── README.md
 ├── REFACTOR_PLAN.md          ← 重构方案（v2.0 蓝图）
 ├── package.json              ← npm workspace 根配置
-├── shared/                   ← 共享模块（13 个）
-│   ├── __tests__/            ← 共享模块测试（97 个）
+├── shared/                   ← 共享模块（14 个）
+│   ├── __tests__/            ← 共享模块测试（100 个）
 │   ├── html-renderer.js
 │   ├── placeholders.js
 │   ├── gfm-table.js
@@ -228,13 +228,13 @@ markdownFomart/
 ## 测试
 
 ```bash
-# 运行所有测试（194 个）
+# 运行所有测试（201 个）
 npm test
 
-# 仅共享模块测试（97 个）
+# 仅共享模块测试（100 个）
 npm run test:shared
 
-# 仅工具集成测试（97 个）
+# 仅工具集成测试（101 个）
 npm run test:tools
 
 # 语法检查
@@ -254,7 +254,7 @@ npm run lint
 - `npm audit --omit=dev` 当前为 0 vulnerabilities
 
 ### 架构统一
-- 抽取 13 个 shared 模块消除重复代码
+- 抽取 14 个 shared 模块消除重复代码
 - 全部 16 工具使用统一 CLI (`shared/cli.js`)
 - npm workspace 统一依赖版本
 - 浏览器工具默认禁用 JavaScript 与远程请求，显式 `--allow-remote` 才放行
@@ -275,7 +275,7 @@ npm run lint
 | 批量处理 | 单个文件 | 支持脚本批量 |
 | 集成 | 手动操作 | 可嵌入 CI/脚本 |
 | 主题 | — | 29 个 PDF 主题 + 暗色模式 |
-| 数据正确性 | — | 21 项 P0 bug 修复 + 194 回归测试 |
+| 数据正确性 | — | 21 项 P0 bug 修复 + 201 回归测试 |
 | 收费 | 免费 | 开源 MIT |
 
 ## License

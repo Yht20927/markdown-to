@@ -147,4 +147,10 @@ describe('md-to-rst P0 fixes', () => {
     assert.ok(rst.includes('    **Title**'), rst);
     assert.ok(!rst.includes('====='), rst);
   });
+
+  it('should keep footnote continuation paragraphs in the note', () => {
+    const rst = runConvert('Text[^1].\n\n[^1]: First.\n\n    Second.');
+    assert.ok(rst.includes('.. [#1] First. Second.'), rst);
+    assert.ok(!/^\s+Second/m.test(rst), rst);
+  });
 });

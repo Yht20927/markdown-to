@@ -161,4 +161,9 @@ describe('md-to-latex P0 fixes', () => {
     assert.ok(out.includes('\\hrulefill'), out);
     assert.ok(!out.includes('\\subsection'), out);
   });
+
+  it('should keep footnote continuation paragraphs in the note', () => {
+    const out = runConvert('Text[^1].\n\n[^1]: First.\n\n    Second.');
+    assert.ok(out.includes('\\footnote{First. Second.}'), out);
+  });
 });
